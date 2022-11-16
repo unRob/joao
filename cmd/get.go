@@ -64,7 +64,7 @@ var getCommand = &cobra.Command{
 				name = strings.ReplaceAll(strings.Replace(comps[len(comps)-1], ".yaml", "", 1), "/", ":")
 			}
 
-			item, err := opClient.Fetch("nidito-admin", name)
+			item, err := opClient.Get("nidito-admin", name)
 			if err != nil {
 				return err
 			}

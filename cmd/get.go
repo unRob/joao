@@ -18,6 +18,7 @@ import (
 	"io/ioutil"
 	"strings"
 
+	opClient "git.rob.mx/nidito/joao/internal/op-client"
 	"git.rob.mx/nidito/joao/pkg/config"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
@@ -39,7 +40,10 @@ var getCommand = &cobra.Command{
 			query = args[1]
 		}
 		var cfg *config.Config
-		if strings.HasSuffix(path, ".yaml") || strings.HasSuffix(path, ".yml") {
+		remote, _ := cmd.Flags().GetBool("remote")
+
+		isYaml := strings.HasSuffix(path, ".yaml") || strings.HasSuffix(path, ".yml")
+		if !remote && isYaml {
 			buf, err := ioutil.ReadFile(path)
 			if err != nil {
 				return fmt.Errorf("could not read file %s", path)
@@ -50,6 +54,22 @@ var getCommand = &cobra.Command{
 			}
 
 			cfg, err = config.ConfigFromYAML(buf)
+			if err != nil {
+				return err
+			}
+		} else {
+			name := path
+			if isYaml {
+				comps := strings.Split(path, "config/")
+				name = strings.ReplaceAll(strings.Replace(comps[len(comps)-1], ".yaml", "", 1), "/", ":")
+			}
+
+			item, err := opClient.Fetch("nidito-admin", name)
+			if err != nil {
+				return err
+			}
+
+			cfg, err = config.ConfigFromOP(item)
 			if err != nil {
 				return err
 			}
@@ -93,12 +113,9 @@ var getCommand = &cobra.Command{
 		if len(entry.Children) > 0 {
 			val := entry.AsMap()
 			if format == "yaml" {
-				bytes, err = yaml.Marshal(val)
-				if err != nil {
-					return err
-				}
-				_, err = cmd.OutOrStdout().Write(bytes)
-				return err
+				enc := yaml.NewEncoder(cmd.OutOrStdout())
+				enc.SetIndent(2)
+				return enc.Encode(val)
 			}
 
 			bytes, err = json.Marshal(val)

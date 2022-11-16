@@ -130,7 +130,6 @@ func (e *Entry) MarshalYAML() (interface{}, error) {
 func (e *Entry) FromOP(fields []*op.ItemField) error {
 	annotations := map[string]string{}
 	data := map[string]string{}
-	labels := []string{}
 
 	for i := 0; i < len(fields); i++ {
 		field := fields[i]
@@ -143,58 +142,73 @@ func (e *Entry) FromOP(fields []*op.ItemField) error {
 				label = field.Section.Label + "." + label
 			}
 		}
-		labels = append(labels, label)
+		if label == "password" || label == "notesPlain" {
+			continue
+		}
 		data[label] = field.Value
 	}
 
-	for _, label := range labels {
-		var value interface{} = data[label]
-
-		if typeString, ok := annotations[label]; ok {
-			switch typeString {
-			case "bool":
-				value = value == "true"
-			case "int":
-				var err error
-				value, err = strconv.ParseInt(value.(string), 10, 64)
-				if err != nil {
-					return err
-				}
+	for label, valueStr := range data {
+		var value interface{}
+		typeString := annotations[label]
+		switch typeString {
+		case "bool":
+			value = valueStr == "true"
+		case "int":
+			var err error
+			value, err = strconv.ParseInt(valueStr, 10, 64)
+			if err != nil {
+				return err
 			}
+		case "float":
+			var err error
+			value, err = strconv.ParseFloat(valueStr, 64)
+			if err != nil {
+				return err
+			}
+		default:
+			value = valueStr
 		}
 
+		// logrus.Warnf("processing: %s, %b", label, value)
 		path := strings.Split(label, ".")
 		container := e
 
 		for idx, key := range path {
 			if idx == len(path)-1 {
-				if !isNumeric(key) {
-					isSecretLabel := annotations[label]
-					container.Children[key] = &Entry{
-						Key:      key,
-						Path:     path,
-						Value:    value,
-						isSecret: isSecretLabel == "!!secret",
-					}
-					break
+				isSecret := annotations[label] == "secret"
+				var style yaml.Style
+				var tag string
+				if isSecret {
+					style = yaml.TaggedStyle
+					tag = "!!secret"
 				}
 
-				holderI := container.Value
-				if container.Value == nil {
-					holderI = []interface{}{}
+				child := &Entry{
+					Key:      key,
+					Path:     path,
+					Value:    value,
+					isSecret: isSecret,
+					node: &yaml.Node{
+						Kind:  yaml.ScalarNode,
+						Value: valueStr,
+						Style: style,
+						Tag:   tag,
+					},
 				}
-
-				holder := holderI.([]interface{})
-				container.Value = append(holder, value)
-				break
+				container.isSequence = isNumeric(key)
+				container.Children[key] = child
+				continue
 			}
 
 			subContainer, exists := container.Children[key]
 			if exists {
 				container = subContainer
 			} else {
-				container.Children[key] = NewEntry(key)
-				container = container.Children[key]
+				child := NewEntry(key)
+				child.Path = append(container.Path, key)
+				container.Children[key] = child
+				container = child
 			}
 		}
 	}

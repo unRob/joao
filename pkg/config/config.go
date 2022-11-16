@@ -13,6 +13,7 @@
 package config
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 
@@ -121,11 +122,14 @@ func (cfg *Config) MarshalYAML() (interface{}, error) {
 
 func (cfg *Config) AsYAML(redacted bool) ([]byte, error) {
 	redactOutput = redacted
-	bytes, err := yaml.Marshal(cfg)
+	var out bytes.Buffer
+	enc := yaml.NewEncoder(&out)
+	enc.SetIndent(2)
+	err := enc.Encode(cfg)
 	if err != nil {
 		return nil, fmt.Errorf("could not serialize config as yaml: %w", err)
 	}
-	return bytes, nil
+	return out.Bytes(), nil
 }
 
 func (cfg *Config) AsJSON(redacted bool, item bool) ([]byte, error) {

@@ -18,81 +18,133 @@ import (
 	"io/ioutil"
 	"strings"
 
-	opClient "git.rob.mx/nidito/joao/internal/op-client"
+	"git.rob.mx/nidito/joao/internal/command"
+	"git.rob.mx/nidito/joao/internal/registry"
 	"git.rob.mx/nidito/joao/pkg/config"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
 
 func init() {
-	getCommand.Flags().StringP("output", "o", "raw", "the format to output in")
-	getCommand.Flags().Bool("remote", false, "query 1password instead of the filesystem")
-	getCommand.Flags().Bool("redacted", false, "do not print secrets")
+	registry.Register(gCommand)
 }
 
-var getCommand = &cobra.Command{
-	Use:  "get CONFIG [--output|-o=(raw|json|yaml)] [--remote] [--redacted] [jq expr]",
-	Args: cobra.MinimumNArgs(1),
-	RunE: func(cmd *cobra.Command, args []string) error {
-		path := args[0]
-		query := ""
-		if len(args) > 1 {
-			query = args[1]
-		}
+func keyFinder(cmd *command.Command, currentValue string) ([]string, cobra.ShellCompDirective, error) {
+	flag := cobra.ShellCompDirectiveError
+	file := cmd.Arguments[0].ToString()
+	buf, err := ioutil.ReadFile(file)
+	if err != nil {
+		return nil, flag, fmt.Errorf("could not read file %s", file)
+	}
+
+	keys, err := config.KeysFromYAML(buf)
+	if err != nil {
+		return nil, flag, err
+	}
+
+	return keys, cobra.ShellCompDirectiveDefault, nil
+}
+
+var gCommand = (&command.Command{
+	Path:    []string{"get"},
+	Summary: "retrieves configuration",
+	Description: `
+looks at the filesystem or remotely, using 1password (over the CLI if available, or 1password-connect, if configured).
+
+## output formats
+
+- **raw**:
+  - when querying for scalar values this will return a non-quoted version of the values
+  - when querying for trees or lists, this will output JSON
+- **yaml**: formats the value at the given path as YAML
+- **json**: formats the value at the given path as JSON
+- **op**: formats the whole configuration as a 1Password item`,
+	Arguments: command.Arguments{
+		{
+			Name:        "config",
+			Description: "The configuration to get from",
+			Required:    true,
+			Values: &command.ValueSource{
+				Files: &[]string{"yaml", "yml"},
+			},
+		},
+		{
+			Name:        "path",
+			Default:     ".",
+			Description: "A dot-delimited path to extract from CONFIG",
+			Values: &command.ValueSource{
+				Func: func(cmd *command.Command, currentValue string) (values []string, flag cobra.ShellCompDirective, err error) {
+					opts := map[string]bool{".": true}
+					options, flag, err := keyFinder(cmd, currentValue)
+					for _, opt := range options {
+						parts := strings.Split(opt, ".")
+						sub := []string{parts[0]}
+						for idx, p := range parts {
+							key := strings.Join(sub, ".")
+							opts[key] = true
+
+							if idx > 0 && idx < len(parts)-1 {
+								sub = append(sub, p)
+							}
+						}
+					}
+
+					for k := range opts {
+						options = append(options, k)
+					}
+					return options, flag, err
+				},
+			},
+		},
+	},
+	Options: command.Options{
+		"output": {
+			ShortName:   "o",
+			Description: "the format to use for rendering output",
+			Default:     "raw",
+			Values: &command.ValueSource{
+				Static: &[]string{"raw", "json", "yaml", "op"},
+			},
+		},
+		"redacted": {
+			Description: "Do not print secret values",
+			Type:        "bool",
+		},
+		"remote": {
+			Description: "Get values from 1password",
+			Type:        "bool",
+		},
+	},
+	Action: func(cmd *command.Command) error {
+		path := cmd.Arguments[0].ToValue().(string)
+		query := cmd.Arguments[1].ToValue().(string)
+
 		var cfg *config.Config
-		remote, _ := cmd.Flags().GetBool("remote")
+		var err error
+		remote := cmd.Options["remote"].ToValue().(bool)
+		format := cmd.Options["output"].ToValue().(string)
+		redacted := cmd.Options["redacted"].ToValue().(bool)
 
-		isYaml := strings.HasSuffix(path, ".yaml") || strings.HasSuffix(path, ".yml")
-		if !remote && isYaml {
-			buf, err := ioutil.ReadFile(path)
-			if err != nil {
-				return fmt.Errorf("could not read file %s", path)
-			}
-
-			if len(buf) == 0 {
-				buf = []byte("{}")
-			}
-
-			cfg, err = config.ConfigFromYAML(buf)
-			if err != nil {
-				return err
-			}
-		} else {
-			name := path
-			if isYaml {
-				comps := strings.Split(path, "config/")
-				name = strings.ReplaceAll(strings.Replace(comps[len(comps)-1], ".yaml", "", 1), "/", ":")
-			}
-
-			item, err := opClient.Get("nidito-admin", name)
-			if err != nil {
-				return err
-			}
-
-			cfg, err = config.ConfigFromOP(item)
-			if err != nil {
-				return err
-			}
+		cfg, err = loadExisting(path, remote)
+		if err != nil {
+			return err
 		}
 
-		format, _ := cmd.Flags().GetString("output")
-		redacted, _ := cmd.Flags().GetBool("redacted")
-
-		if query == "" {
+		if query == "" || query == "." {
 			switch format {
 			case "yaml", "raw":
 				bytes, err := cfg.AsYAML(redacted)
 				if err != nil {
 					return err
 				}
-				_, err = cmd.OutOrStdout().Write(bytes)
+				_, err = cmd.Cobra.OutOrStdout().Write(bytes)
 				return err
-			case "json", "json-op":
-				bytes, err := cfg.AsJSON(redacted, format == "json-op")
+			case "json", "op":
+				bytes, err := cfg.AsJSON(redacted, format == "op")
 				if err != nil {
 					return err
 				}
-				_, err = cmd.OutOrStdout().Write(bytes)
+				_, err = cmd.Cobra.OutOrStdout().Write(bytes)
 				return err
 			}
 			return fmt.Errorf("unknown format %s", format)
@@ -102,18 +154,17 @@ var getCommand = &cobra.Command{
 
 		entry := cfg.Tree
 		for _, part := range parts {
-			entry = entry.Children[part]
+			entry = entry.ChildNamed(part)
 			if entry == nil {
 				return fmt.Errorf("value not found at %s of %s", part, query)
 			}
 		}
 
 		var bytes []byte
-		var err error
-		if len(entry.Children) > 0 {
+		if len(entry.Content) > 0 {
 			val := entry.AsMap()
 			if format == "yaml" {
-				enc := yaml.NewEncoder(cmd.OutOrStdout())
+				enc := yaml.NewEncoder(cmd.Cobra.OutOrStdout())
 				enc.SetIndent(2)
 				return enc.Encode(val)
 			}
@@ -123,17 +174,10 @@ var getCommand = &cobra.Command{
 				return err
 			}
 		} else {
-			if valString, ok := entry.Value.(string); ok {
-				bytes = []byte(valString)
-			} else {
-				bytes, err = json.Marshal(entry.Value)
-				if err != nil {
-					return err
-				}
-			}
+			bytes = []byte(entry.String())
 		}
 
-		_, err = cmd.OutOrStdout().Write(bytes)
+		_, err = cmd.Cobra.OutOrStdout().Write(bytes)
 		return err
 	},
-}
+}).SetBindings()

@@ -10,27 +10,22 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package main
+package config
 
-import (
-	_ "git.rob.mx/nidito/joao/cmd"
-	"git.rob.mx/nidito/joao/internal/registry"
-	"git.rob.mx/nidito/joao/internal/runtime"
-	"github.com/sirupsen/logrus"
-)
+import "fmt"
 
-var version = "dev"
-
-func main() {
-	logrus.SetFormatter(&logrus.TextFormatter{
-		DisableLevelTruncation: true,
-		DisableTimestamp:       true,
-		ForceColors:            runtime.ColorEnabled(),
-	})
-
-	err := registry.Execute(version)
-
-	if err != nil {
-		logrus.Fatal(err)
+func (c *Config) Lookup(query []string) (*Entry, error) {
+	if len(query) == 0 || len(query) == 1 && query[0] == "." {
+		return c.Tree, nil
 	}
+
+	entry := c.Tree
+	for _, part := range query {
+		entry = entry.ChildNamed(part)
+		if entry == nil {
+			return nil, fmt.Errorf("value not found at %s of %s", part, query)
+		}
+	}
+
+	return entry, nil
 }

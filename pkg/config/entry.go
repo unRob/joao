@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	op "github.com/1Password/connect-sdk-go/onepassword"
+	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )
 
@@ -30,75 +31,158 @@ func isNumeric(s string) bool {
 	return true
 }
 
+type secretValue string
 type Entry struct {
-	Key        string
-	Path       []string
-	Value      interface{}
-	Children   map[string]*Entry
-	isSecret   bool
-	isSequence bool
-	node       *yaml.Node
+	Value       string
+	Kind        yaml.Kind
+	Tag         string
+	Path        []string
+	Content     []*Entry
+	Style       yaml.Style
+	FootComment string
+	LineComment string
+	HeadComment string
+	Line        int
+	Column      int
+	Type        string
 }
 
-func NewEntry(name string) *Entry {
-	return &Entry{Key: name, Children: map[string]*Entry{}}
+func NewEntry(name string, kind yaml.Kind) *Entry {
+	return &Entry{
+		Content: []*Entry{},
+		Value:   name,
+		Kind:    kind,
+	}
 }
 
-func (e *Entry) SetKey(key string, parent []string) {
-	e.Path = append(parent, key)
-	e.Key = key
-	for k, child := range e.Children {
-		child.SetKey(k, e.Path)
+func CopyFromNode(e *Entry, n *yaml.Node) *Entry {
+	if e.Content == nil {
+		e.Content = []*Entry{}
+	}
+
+	e.Kind = n.Kind
+	e.Value = n.Value
+	e.Tag = n.Tag
+	e.Style = n.Style
+	e.HeadComment = n.HeadComment
+	e.LineComment = n.LineComment
+	e.FootComment = n.FootComment
+	e.Line = n.Line
+	e.Column = n.Column
+	e.Type = n.ShortTag()
+	return e
+}
+
+func (e *Entry) String() string {
+	return e.Value
+}
+
+func (e *Entry) ChildNamed(name string) *Entry {
+	for _, child := range e.Content {
+		if child.Name() == name {
+			return child
+		}
+	}
+	return nil
+}
+
+func (e *Entry) SetPath(parent []string, current string) {
+	e.Path = append(parent, current)
+	switch e.Kind {
+	case yaml.MappingNode, yaml.DocumentNode:
+		for idx := 0; idx < len(e.Content); idx += 2 {
+			key := e.Content[idx]
+			child := e.Content[idx+1]
+			child.SetPath(e.Path, key.Value)
+		}
+	case yaml.SequenceNode:
+		for idx, child := range e.Content {
+			child.Path = append(e.Path, fmt.Sprintf("%d", idx))
+		}
 	}
 }
 
 func (e *Entry) UnmarshalYAML(node *yaml.Node) error {
-	e.node = node
-	switch node.Kind {
-	case yaml.DocumentNode, yaml.MappingNode:
-		if e.Children == nil {
-			e.Children = map[string]*Entry{}
-		}
-		err := node.Decode(&e.Children)
-		if err != nil {
-			return err
-		}
+	CopyFromNode(e, node)
 
-	case yaml.SequenceNode:
-		list := []*Entry{}
-		err := node.Decode(&list)
-		if err != nil {
-			return err
+	switch node.Kind {
+	case yaml.SequenceNode, yaml.ScalarNode:
+		for _, n := range node.Content {
+			sub := &Entry{}
+			CopyFromNode(sub, n)
+			if err := n.Decode(&sub); err != nil {
+				return err
+			}
+			sub.SetPath(e.Path, n.Value)
+			e.Content = append(e.Content, sub)
 		}
-		if e.Children == nil {
-			e.Children = map[string]*Entry{}
+	case yaml.DocumentNode, yaml.MappingNode:
+		for idx := 0; idx < len(node.Content); idx += 2 {
+			keyNode := node.Content[idx]
+			valueNode := node.Content[idx+1]
+			key := NewEntry("", keyNode.Kind)
+			value := NewEntry(keyNode.Value, keyNode.Kind)
+			if err := keyNode.Decode(key); err != nil {
+				logrus.Errorf("decode map key: %s", keyNode.Value)
+				return err
+			}
+
+			if err := valueNode.Decode(value); err != nil {
+				logrus.Errorf("decode map key: %s", keyNode.Value)
+				return err
+			}
+			value.SetPath(e.Path, key.Value)
+			e.Content = append(e.Content, key, value)
 		}
-		for idx, child := range list {
-			child.Key = fmt.Sprintf("%d", idx)
-			e.Children[child.Key] = child
-		}
-		e.isSequence = true
-	case yaml.ScalarNode:
-		var val interface{}
-		err := node.Decode(&val)
-		if err != nil {
-			return err
-		}
-		e.Value = val
-		e.isSecret = node.Tag == "!!secret"
 	default:
 		return fmt.Errorf("unknown yaml type: %v", node.Kind)
 	}
 	return nil
 }
 
-func (e *Entry) MarshalYAML() (interface{}, error) {
-	if len(e.Children) == 0 {
-		if redactOutput && e.isSecret {
-			n := e.node
+func (e *Entry) IsSecret() bool {
+	return e.Tag == "!!secret"
+}
+
+func (e *Entry) TypeStr() string {
+	if e.IsSecret() {
+		return "secret"
+	}
+
+	switch e.Type {
+	case "!!bool":
+		return "bool"
+	case "!!int":
+		return "int"
+	case "!!float":
+		return "float"
+	}
+
+	return ""
+}
+
+func (e *Entry) asNode() *yaml.Node {
+	return &yaml.Node{
+		Kind:        e.Kind,
+		Style:       e.Style,
+		Tag:         e.Tag,
+		Value:       e.Value,
+		HeadComment: e.HeadComment,
+		LineComment: e.LineComment,
+		FootComment: e.FootComment,
+		Line:        e.Line,
+		Column:      e.Column,
+		Content:     []*yaml.Node{},
+	}
+}
+
+func (e *Entry) MarshalYAML() (*yaml.Node, error) {
+	n := e.asNode()
+	if n.Kind == yaml.ScalarNode {
+		if redactOutput && e.IsSecret() {
 			return &yaml.Node{
 				Kind:        n.Kind,
-				Style:       yaml.TaggedStyle,
+				Style:       yaml.TaggedStyle & n.Style,
 				Tag:         n.Tag,
 				Value:       "",
 				HeadComment: n.HeadComment,
@@ -108,23 +192,17 @@ func (e *Entry) MarshalYAML() (interface{}, error) {
 				Column:      n.Column,
 			}, nil
 		}
-		return e.node, nil
+		return n, nil
 	}
 
-	if e.isSequence {
-		ret := make([]*Entry, len(e.Children))
-		for k, child := range e.Children {
-			idx, _ := strconv.Atoi(k)
-			ret[idx] = child
+	for _, v := range e.Content {
+		node, err := v.MarshalYAML()
+		if err != nil {
+			return nil, err
 		}
-		return ret, nil
+		n.Content = append(n.Content, node)
 	}
-
-	ret := map[string]*Entry{}
-	for k, child := range e.Children {
-		ret[k] = child
-	}
-	return ret, nil
+	return n, nil
 }
 
 func (e *Entry) FromOP(fields []*op.ItemField) error {
@@ -149,13 +227,18 @@ func (e *Entry) FromOP(fields []*op.ItemField) error {
 	}
 
 	for label, valueStr := range data {
-		var value interface{}
-		typeString := annotations[label]
-		switch typeString {
+		var value any
+		var err error
+		var style yaml.Style
+		var tag string
+
+		switch annotations[label] {
 		case "bool":
-			value = valueStr == "true"
+			value, err = strconv.ParseBool(valueStr)
+			if err != nil {
+				return err
+			}
 		case "int":
-			var err error
 			value, err = strconv.ParseInt(valueStr, 10, 64)
 			if err != nil {
 				return err
@@ -166,48 +249,41 @@ func (e *Entry) FromOP(fields []*op.ItemField) error {
 			if err != nil {
 				return err
 			}
+		case "secret":
+			value = secretValue(value.(string))
+			style = yaml.TaggedStyle
+			tag = "!!secret"
 		default:
+			// either no annotation or an unknown value
 			value = valueStr
 		}
 
-		// logrus.Warnf("processing: %s, %b", label, value)
 		path := strings.Split(label, ".")
 		container := e
 
 		for idx, key := range path {
 			if idx == len(path)-1 {
-				isSecret := annotations[label] == "secret"
-				var style yaml.Style
-				var tag string
-				if isSecret {
-					style = yaml.TaggedStyle
-					tag = "!!secret"
-				}
-
-				child := &Entry{
-					Key:      key,
-					Path:     path,
-					Value:    value,
-					isSecret: isSecret,
-					node: &yaml.Node{
-						Kind:  yaml.ScalarNode,
-						Value: valueStr,
-						Style: style,
-						Tag:   tag,
-					},
-				}
-				container.isSequence = isNumeric(key)
-				container.Children[key] = child
-				continue
+				container.Content = append(container.Content, &Entry{
+					Path:  path,
+					Kind:  yaml.ScalarNode,
+					Value: valueStr,
+					Style: style,
+					Tag:   tag,
+				})
+				break
 			}
 
-			subContainer, exists := container.Children[key]
-			if exists {
+			subContainer := container.ChildNamed(key)
+			if subContainer != nil {
 				container = subContainer
 			} else {
-				child := NewEntry(key)
+				kind := yaml.MappingNode
+				if isNumeric(key) {
+					kind = yaml.SequenceNode
+				}
+				child := NewEntry(key, kind)
 				child.Path = append(container.Path, key)
-				container.Children[key] = child
+				container.Content = append(container.Content, child)
 				container = child
 			}
 		}
@@ -216,86 +292,76 @@ func (e *Entry) FromOP(fields []*op.ItemField) error {
 	return nil
 }
 
-func (e *Entry) ToOP(annotationsSection *op.ItemSection) []*op.ItemField {
+func (e *Entry) ToOP() []*op.ItemField {
 	ret := []*op.ItemField{}
 	var section *op.ItemSection
-	name := e.Key
+	name := e.Path[len(e.Path)-1]
 	if len(e.Path) > 1 {
 		section = &op.ItemSection{ID: e.Path[0]}
 		name = strings.Join(e.Path[1:], ".")
 	}
 
-	if e.isSecret {
-		ret = append(ret, &op.ItemField{
-			ID:      "~annotations." + strings.Join(e.Path, "."),
-			Section: annotationsSection,
-			Label:   name,
-			Type:    "STRING",
-			Value:   "secret",
-		})
-	} else if _, ok := e.Value.(bool); ok {
-		ret = append(ret, &op.ItemField{
-			ID:      "~annotations." + strings.Join(e.Path, "."),
-			Section: annotationsSection,
-			Label:   name,
-			Type:    "STRING",
-			Value:   "bool",
-		})
-	} else if _, ok := e.Value.(int); ok {
-		ret = append(ret, &op.ItemField{
-			ID:      "~annotations." + strings.Join(e.Path, "."),
-			Section: annotationsSection,
-			Label:   name,
-			Type:    "STRING",
-			Value:   "int",
-		})
-	} else if _, ok := e.Value.(float64); ok {
-		ret = append(ret, &op.ItemField{
-			ID:      "~annotations." + strings.Join(e.Path, "."),
-			Section: annotationsSection,
-			Label:   name,
-			Type:    "STRING",
-			Value:   "float",
-		})
-	}
+	if len(e.Content) == 0 {
+		fieldType := "STRING"
+		if e.IsSecret() {
+			fieldType = "CONCEALED"
+		} else {
+			if annotationType := e.TypeStr(); annotationType != "" {
+				ret = append(ret, &op.ItemField{
+					ID:      "~annotations." + strings.Join(e.Path, "."),
+					Section: annotationsSection,
+					Label:   name,
+					Type:    "STRING",
+					Value:   annotationType,
+				})
+			}
+		}
 
-	if len(e.Children) == 0 {
 		ret = append(ret, &op.ItemField{
 			ID:      strings.Join(e.Path, "."),
 			Section: section,
 			Label:   name,
-			Type:    "STRING",
-			Value:   fmt.Sprintf("%s", e.Value),
+			Type:    fieldType,
+			Value:   e.Value,
 		})
 	} else {
-		for _, child := range e.Children {
-			ret = append(ret, child.ToOP(annotationsSection)...)
+		for _, child := range e.Content {
+			ret = append(ret, child.ToOP()...)
 		}
 	}
 
 	return ret
 }
 
-func (e *Entry) AsMap() interface{} {
-	if len(e.Children) == 0 {
-		if redactOutput && e.isSecret {
+func (e *Entry) Name() string {
+	if e.Path == nil || len(e.Path) == 0 {
+		return ""
+	}
+	return e.Path[len(e.Path)-1]
+}
+
+func (e *Entry) AsMap() any {
+	if len(e.Content) == 0 {
+		if redactOutput && e.IsSecret() {
 			return ""
 		}
 		return e.Value
 	}
 
-	if e.isSequence {
-		ret := make([]interface{}, len(e.Children))
-		for key, child := range e.Children {
-			idx, _ := strconv.Atoi(key)
-			ret[idx] = child.AsMap()
+	if e.Kind == yaml.SequenceNode {
+		ret := []any{}
+		for _, child := range e.Content {
+			ret = append(ret, child.AsMap())
 		}
 		return ret
 	}
 
-	ret := map[string]interface{}{}
-	for key, child := range e.Children {
-		ret[key] = child.AsMap()
+	ret := map[string]any{}
+	for idx, child := range e.Content {
+		if idx%2 == 0 {
+			continue
+		}
+		ret[child.Name()] = child.AsMap()
 	}
 	return ret
 }

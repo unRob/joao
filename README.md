@@ -92,7 +92,7 @@ smtp:
 
 ```sh
 # NAME can be either a filesystem path or a colon delimited item name
-# for example: config/host/juazeiro.yaml or host:juazeiro
+# for example: config/host/juazeiro.yaml or [op-vault-name/]host:juazeiro
 
 # DOT_DELIMITED_PATH is 
 # for example: tls.cert, roles.0, dc

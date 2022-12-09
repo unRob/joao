@@ -119,13 +119,11 @@ looks at the filesystem or remotely, using 1password (over the CLI if available,
 		path := cmd.Arguments[0].ToValue().(string)
 		query := cmd.Arguments[1].ToValue().(string)
 
-		var cfg *config.Config
-		var err error
 		remote := cmd.Options["remote"].ToValue().(bool)
 		format := cmd.Options["output"].ToValue().(string)
 		redacted := cmd.Options["redacted"].ToValue().(bool)
 
-		cfg, err = loadExisting(path, remote)
+		cfg, err := config.Load(path, remote)
 		if err != nil {
 			return err
 		}

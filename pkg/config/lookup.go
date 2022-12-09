@@ -12,7 +12,13 @@
 // limitations under the License.
 package config
 
-import "fmt"
+import (
+	"fmt"
+	"os"
+	"strings"
+
+	"gopkg.in/yaml.v3"
+)
 
 func (c *Config) Lookup(query []string) (*Entry, error) {
 	if len(query) == 0 || len(query) == 1 && query[0] == "." {
@@ -28,4 +34,21 @@ func (c *Config) Lookup(query []string) (*Entry, error) {
 	}
 
 	return entry, nil
+}
+
+func findRepoConfig(from string) (*repoModeConfig, error) {
+	parts := strings.Split(from, "/")
+	for i := len(parts); i > 0; i -= 1 {
+		query := strings.Join(parts[0:i], "/")
+		if bytes, err := os.ReadFile(query + "/.joao.yaml"); err == nil {
+			rmc := &repoModeConfig{Repo: query}
+			err := yaml.Unmarshal(bytes, rmc)
+			if err != nil {
+				return nil, err
+			}
+			return rmc, nil
+		}
+	}
+
+	return nil, nil
 }

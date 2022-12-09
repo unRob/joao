@@ -81,7 +81,7 @@ Will read from stdin (or ﹅--from﹅ a file) and store it at the ﹅PATH
 		input := cmd.Options["input"].ToValue().(string)
 		parseJSON := cmd.Options["json"].ToValue().(bool)
 
-		cfg, err = loadExisting(path, false)
+		cfg, err = config.Load(path, false)
 		if err != nil {
 			return err
 		}

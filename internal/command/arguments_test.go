@@ -13,6 +13,7 @@
 package command_test
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 
@@ -70,7 +71,7 @@ func TestParse(t *testing.T) {
 		t.Fatalf("variadic argument isn't on AllKnown map: %v", known)
 	}
 
-	if val != "one two three" {
+	if !reflect.DeepEqual(val, []string{"one", "two", "three"}) {
 		t.Fatalf("Known argument does not match. expected: %s, got %s", "one two three", val)
 	}
 
@@ -96,8 +97,9 @@ func TestParse(t *testing.T) {
 		t.Fatalf("variadic argument isn't on AllKnown map: %v", known)
 	}
 
-	if val != "defaultVariadic0 defaultVariadic1" {
-		t.Fatalf("variadic argument does not match. expected: %s, got %s", "defaultVariadic0 defaultVariadic1", val)
+	expected := []string{"defaultVariadic0", "defaultVariadic1"}
+	if !reflect.DeepEqual(val, expected) {
+		t.Fatalf("variadic argument does not match. expected: %s, got %s", expected, val)
 	}
 }
 
@@ -123,8 +125,9 @@ func TestBeforeParse(t *testing.T) {
 		t.Fatalf("variadic argument isn't on AllKnown map: %v", known)
 	}
 
-	if val != "defaultVariadic0 defaultVariadic1" {
-		t.Fatalf("variadic argument does not match. expected: %s, got %s", "defaultVariadic0 defaultVariadic1", val)
+	expected := []string{"defaultVariadic0", "defaultVariadic1"}
+	if !reflect.DeepEqual(val, expected) {
+		t.Fatalf("variadic argument does not match. expected: %s, got %s", expected, val)
 	}
 }
 
@@ -195,7 +198,7 @@ func TestArgumentsValidate(t *testing.T) {
 			Args:        []string{"good"},
 			ErrorSuffix: "could not validate argument for command test script bad-exit, ran",
 			Command: (&Command{
-				// Name: []string{"test", "script", "bad-exit"},
+				Path: []string{"test", "script", "bad-exit"},
 				Arguments: []*Argument{
 					{
 						Name:    "first",

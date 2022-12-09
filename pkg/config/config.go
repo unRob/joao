@@ -16,6 +16,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"sort"
 	"strings"
 
@@ -25,7 +26,6 @@ import (
 )
 
 type Config struct {
-	Path  string
 	Vault string
 	Name  string
 	Tree  *Entry
@@ -85,17 +85,99 @@ func (cfg *Config) ToOP() *op.Item {
 	return &op.Item{
 		Title:    cfg.Name,
 		Sections: sections,
-		Vault:    op.ItemVault{ID: "nidito-admin"},
+		Vault:    op.ItemVault{ID: cfg.Vault},
 		Category: op.Password,
 		Fields:   fields,
 	}
 }
 
-func ConfigFromYAML(data []byte, name string) (*Config, error) {
+type opDetails struct {
+	Vault        string `yaml:"vault"`
+	Name         string `yaml:"name"`
+	NameTemplate string `yaml:"nameTemplate"`
+}
+
+type opConfig interface {
+	Name() string
+	Vault() string
+}
+
+type inFileConfig struct {
+	*opDetails
+	*yaml.Node
+}
+
+type virtualConfig struct {
+	*opDetails
+}
+
+func (ifc *inFileConfig) MarshalYAML() (any, error) {
+	return ifc.Node, nil
+}
+
+func (vc *virtualConfig) MarshalYAML() (any, error) {
+	return nil, nil
+}
+
+func (ifc *inFileConfig) UnmarshalYAML(node *yaml.Node) error {
+	ifc.Node = node
+	d := &opDetails{}
+
+	if err := node.Decode(&d); err != nil {
+		return err
+	}
+	ifc.opDetails = d
+
+	return nil
+}
+
+func (ifc *inFileConfig) Name() string {
+	return ifc.opDetails.Name
+}
+
+func (ifc *inFileConfig) Vault() string {
+	return ifc.opDetails.Name
+}
+
+type singleModeConfig struct {
+	Config *opDetails `yaml:"_config,omitempty"`
+}
+
+type repoModeConfig struct {
+	Repo         string
+	Vault        string `yaml:"vault"`
+	NameTemplate string `yaml:"nameTemplate"`
+}
+
+func ConfigFromFile(path string) (*Config, error) {
+	buf, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("could not read file %s", path)
+	}
+
+	if len(buf) == 0 {
+		buf = []byte("{}")
+	}
+
+	name, vault, err := vaultAndNameFrom(path, buf)
+	if err != nil {
+		return nil, err
+	}
+	logrus.Debugf("Found name: %s and vault: %s", name, vault)
+
+	cfg, err := ConfigFromYAML(buf)
+	if err != nil {
+		return nil, err
+	}
+	cfg.Name = name
+	cfg.Vault = vault
+
+	return cfg, nil
+}
+
+func ConfigFromYAML(data []byte) (*Config, error) {
 	cfg := &Config{
-		Vault: "vault",
-		Name:  name,
-		Tree:  NewEntry("root", yaml.MappingNode),
+		Tree: NewEntry("root", yaml.MappingNode),
 	}
 
 	yaml.Unmarshal(data, &cfg.Tree)
@@ -135,7 +217,7 @@ func scalarsIn(data map[string]yaml.Node, parents []string) ([]string, error) {
 			}
 			keys = append(keys, ret...)
 		default:
-			logrus.Fatalf("found unknown %s at %s", leaf.Kind, key)
+			logrus.Fatalf("found unknown %v at %s", leaf.Kind, key)
 		}
 
 	}

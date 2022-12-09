@@ -28,6 +28,8 @@ func main() {
 		ForceColors:            runtime.ColorEnabled(),
 	})
 
+	logrus.SetLevel(logrus.DebugLevel)
+
 	err := registry.Execute(version)
 
 	if err != nil {

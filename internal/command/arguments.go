@@ -179,7 +179,7 @@ func (arg *Argument) ToString() string {
 
 	if arg.Variadic {
 		val := val.([]string)
-		return strings.Join(val, "")
+		return strings.Join(val, " ")
 	}
 
 	return val.(string)

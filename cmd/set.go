@@ -13,12 +13,16 @@
 package cmd
 
 import (
+	"fmt"
+	"io/fs"
 	"os"
 	"strings"
 
 	"git.rob.mx/nidito/joao/internal/command"
+	opclient "git.rob.mx/nidito/joao/internal/op-client"
 	"git.rob.mx/nidito/joao/internal/registry"
 	"git.rob.mx/nidito/joao/pkg/config"
+	"github.com/sirupsen/logrus"
 )
 
 func init() {
@@ -70,6 +74,10 @@ Will read from stdin (or ﹅--from﹅ a file) and store it at the ﹅PATH
 			Description: "Treat input as JSON-encoded",
 			Type:        "bool",
 		},
+		"flush": {
+			Description: "Save to 1Password after saving to file",
+			Type:        "bool",
+		},
 	},
 	Action: func(cmd *command.Command) error {
 		path := cmd.Arguments[0].ToValue().(string)
@@ -80,6 +88,7 @@ Will read from stdin (or ﹅--from﹅ a file) and store it at the ﹅PATH
 		secret := cmd.Options["secret"].ToValue().(bool)
 		input := cmd.Options["input"].ToValue().(string)
 		parseJSON := cmd.Options["json"].ToValue().(bool)
+		flush := cmd.Options["flush"].ToValue().(bool)
 
 		cfg, err = config.Load(path, false)
 		if err != nil {
@@ -103,7 +112,23 @@ Will read from stdin (or ﹅--from﹅ a file) and store it at the ﹅PATH
 			return err
 		}
 
-		_, err = cmd.Cobra.OutOrStdout().Write(b)
+		var mode fs.FileMode = 644
+		// var mode uint32 =
+		if info, err := os.Stat(path); err == nil {
+			mode = info.Mode().Perm()
+		}
+
+		if err := os.WriteFile(path, b, mode); err != nil {
+			return fmt.Errorf("could not save changes to %s: %w", path, err)
+		}
+
+		if flush {
+			if err := opclient.Update(cfg.Vault, cfg.Name, cfg.ToOP()); err != nil {
+				return fmt.Errorf("could not flush to 1password: %w", err)
+			}
+		}
+
+		logrus.Info("Done")
 		return err
 	},
 }).SetBindings()

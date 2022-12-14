@@ -157,7 +157,6 @@ func (vs *ValueSource) Resolve(currentValue string) (values []string, flag cobra
 
 		values = strings.Split(stdout.String(), "\n")
 		flag = cobra.ShellCompDirectiveDefault
-		err = nil
 	case vs.Script != "":
 		if vs.command == nil {
 			return nil, cobra.ShellCompDirectiveError, fmt.Errorf("bug: command is nil")
@@ -178,7 +177,7 @@ func (vs *ValueSource) Resolve(currentValue string) (values []string, flag cobra
 	vs.computed = &values
 
 	if vs.SuggestRaw {
-		flag = flag | cobra.ShellCompDirectiveNoSpace
+		flag |= cobra.ShellCompDirectiveNoSpace
 	}
 
 	vs.flag = flag

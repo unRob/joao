@@ -38,7 +38,7 @@ func argIsYAMLFile(path string) bool {
 // 	return "config/" + strings.ReplaceAll(name, ":", "/") + ".yaml"
 // }
 
-func vaultAndNameFrom(path string, buf []byte) (string, string, error) {
+func vaultAndNameFrom(path string, buf []byte) (name string, vault string, err error) {
 	smc := &singleModeConfig{}
 	if buf == nil {
 		var err error
@@ -48,8 +48,8 @@ func vaultAndNameFrom(path string, buf []byte) (string, string, error) {
 		}
 	}
 
-	if err := yaml.Unmarshal(buf, &smc); err == nil && smc.Config != nil {
-		return smc.Config.Vault, smc.Config.Name, nil
+	if err = yaml.Unmarshal(buf, &smc); err == nil && smc.Config != nil {
+		return smc.Config.Name, smc.Config.Vault, nil
 	}
 
 	rmc, err := findRepoConfig(path)
@@ -85,12 +85,11 @@ func vaultAndNameFrom(path string, buf []byte) (string, string, error) {
 }
 
 func Load(ref string, preferRemote bool) (*Config, error) {
-	isYaml := argIsYAMLFile(ref)
 	if preferRemote {
 		name := ref
 		vault := ""
 
-		if isYaml {
+		if argIsYAMLFile(ref) {
 			var err error
 			name, vault, err = vaultAndNameFrom(ref, nil)
 			if err != nil {
@@ -109,12 +108,12 @@ func Load(ref string, preferRemote bool) (*Config, error) {
 			return nil, err
 		}
 
-		return ConfigFromOP(item)
+		return FromOP(item)
 	}
 
-	if !isYaml {
+	if !argIsYAMLFile(ref) {
 		return nil, fmt.Errorf("could not load %s from local as it's not a path", ref)
 	}
 
-	return ConfigFromFile(ref)
+	return FromFile(ref)
 }

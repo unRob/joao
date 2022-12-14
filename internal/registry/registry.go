@@ -153,7 +153,7 @@ func Execute(version string) error {
 		container := ccRoot
 		for idx, cp := range cmd.Path {
 			if idx == len(cmd.Path)-1 {
-				logrus.Debugf("adding command %s to %s", leaf.Name(), cmd.Path[0:idx])
+				// logrus.Debugf("adding command %s to %s", leaf.Name(), cmd.Path[0:idx])
 				container.AddCommand(leaf)
 				break
 			}

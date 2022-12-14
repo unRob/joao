@@ -173,9 +173,6 @@ func (arg *Argument) IsKnown() bool {
 
 func (arg *Argument) ToString() string {
 	val := arg.ToValue()
-	if val == nil {
-		return ""
-	}
 
 	if arg.Variadic {
 		val := val.([]string)

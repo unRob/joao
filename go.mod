@@ -4,6 +4,7 @@ go 1.18
 
 require (
 	github.com/1Password/connect-sdk-go v1.5.0
+	github.com/alessio/shellescape v1.4.1
 	github.com/charmbracelet/glamour v0.6.0
 	github.com/fatih/color v1.13.0
 	github.com/go-playground/validator/v10 v10.11.1

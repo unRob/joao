@@ -21,8 +21,8 @@ import (
 	"github.com/spf13/pflag"
 )
 
-type CommandHelpFunc func(printLinks bool) string
-type CommandAction func(cmd *Command) error
+type HelpFunc func(printLinks bool) string
+type Action func(cmd *Command) error
 
 type Command struct {
 	Path []string
@@ -33,10 +33,10 @@ type Command struct {
 	// A list of arguments for a command
 	Arguments Arguments `json:"arguments" yaml:"arguments" validate:"dive"`
 	// A map of option names to option definitions
-	Options  Options         `json:"options" yaml:"options" validate:"dive"`
-	HelpFunc CommandHelpFunc `json:"-" yaml:"-"`
+	Options  Options  `json:"options" yaml:"options" validate:"dive"`
+	HelpFunc HelpFunc `json:"-" yaml:"-"`
 	// The action to take upon running
-	Action       CommandAction
+	Action       Action
 	runtimeFlags *pflag.FlagSet
 	Cobra        *cobra.Command
 }

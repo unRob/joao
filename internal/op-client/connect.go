@@ -10,17 +10,14 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package opClient
+package opclient
 
 import (
-	"fmt"
-
 	"github.com/1Password/connect-sdk-go/connect"
 	op "github.com/1Password/connect-sdk-go/onepassword"
-	"github.com/sirupsen/logrus"
 )
 
-// UUIDLength defines the required length of UUIDs
+// UUIDLength defines the required length of UUIDs.
 const UUIDLength = 26
 
 // IsValidClientUUID returns true if the given client uuid is valid.
@@ -50,30 +47,30 @@ func NewConnect(host, token string) *Connect {
 	return &Connect{client: client}
 }
 
-func (b *Connect) getVaultId(vaultIdentifier string) (string, error) {
-	if !IsValidClientUUID(vaultIdentifier) {
-		vaults, err := b.client.GetVaultsByTitle(vaultIdentifier)
-		if err != nil {
-			return "", err
-		}
+// func (b *Connect) getVaultId(vaultIdentifier string) (string, error) {
+// 	if !IsValidClientUUID(vaultIdentifier) {
+// 		vaults, err := b.client.GetVaultsByTitle(vaultIdentifier)
+// 		if err != nil {
+// 			return "", err
+// 		}
 
-		if len(vaults) == 0 {
-			return "", fmt.Errorf("No vaults found with identifier %q", vaultIdentifier)
-		}
+// 		if len(vaults) == 0 {
+// 			return "", fmt.Errorf("no vaults found with identifier %q", vaultIdentifier)
+// 		}
 
-		oldestVault := vaults[0]
-		if len(vaults) > 1 {
-			for _, returnedVault := range vaults {
-				if returnedVault.CreatedAt.Before(oldestVault.CreatedAt) {
-					oldestVault = returnedVault
-				}
-			}
-			logrus.Infof("%v 1Password vaults found with the title %q. Will use vault %q as it is the oldest.", len(vaults), vaultIdentifier, oldestVault.ID)
-		}
-		vaultIdentifier = oldestVault.ID
-	}
-	return vaultIdentifier, nil
-}
+// 		oldestVault := vaults[0]
+// 		if len(vaults) > 1 {
+// 			for _, returnedVault := range vaults {
+// 				if returnedVault.CreatedAt.Before(oldestVault.CreatedAt) {
+// 					oldestVault = returnedVault
+// 				}
+// 			}
+// 			logrus.Infof("%v 1Password vaults found with the title %q. Will use vault %q as it is the oldest.", len(vaults), vaultIdentifier, oldestVault.ID)
+// 		}
+// 		vaultIdentifier = oldestVault.ID
+// 	}
+// 	return vaultIdentifier, nil
+// }
 
 func (b *Connect) Get(vault, name string) (*op.Item, error) {
 	return b.client.GetItem(name, vault)

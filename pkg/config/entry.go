@@ -131,6 +131,9 @@ func (e *Entry) UnmarshalYAML(node *yaml.Node) error {
 				logrus.Errorf("decode map key: %s", keyNode.Value)
 				return err
 			}
+			if valueNode.Tag == YAMLTypeMetaConfig {
+				key.Type = YAMLTypeMetaConfig
+			}
 			value.SetPath(e.Path, key.Value)
 			e.Content = append(e.Content, key, value)
 		}
@@ -141,7 +144,7 @@ func (e *Entry) UnmarshalYAML(node *yaml.Node) error {
 }
 
 func (e *Entry) IsSecret() bool {
-	return e.Tag == "!!secret"
+	return e.Tag == YAMLTypeSecret
 }
 
 func (e *Entry) TypeStr() string {
@@ -252,7 +255,7 @@ func (e *Entry) FromOP(fields []*op.ItemField) error {
 		case "secret":
 			value = secretValue(value.(string))
 			style = yaml.TaggedStyle
-			tag = "!!secret"
+			tag = YAMLTypeSecret
 		default:
 			// either no annotation or an unknown value
 			value = valueStr
@@ -295,13 +298,14 @@ func (e *Entry) FromOP(fields []*op.ItemField) error {
 func (e *Entry) ToOP() []*op.ItemField {
 	ret := []*op.ItemField{}
 	var section *op.ItemSection
-	name := e.Path[len(e.Path)-1]
-	if len(e.Path) > 1 {
-		section = &op.ItemSection{ID: e.Path[0]}
-		name = strings.Join(e.Path[1:], ".")
-	}
 
-	if len(e.Content) == 0 {
+	if e.Kind == yaml.ScalarNode {
+		name := e.Path[len(e.Path)-1]
+		if len(e.Path) > 1 {
+			section = &op.ItemSection{ID: e.Path[0]}
+			name = strings.Join(e.Path[1:], ".")
+		}
+
 		fieldType := "STRING"
 		if e.IsSecret() {
 			fieldType = "CONCEALED"
@@ -324,12 +328,24 @@ func (e *Entry) ToOP() []*op.ItemField {
 			Type:    fieldType,
 			Value:   e.Value,
 		})
-	} else {
+		return ret
+	}
+
+	if e.Kind == yaml.SequenceNode {
+		ret := []*op.ItemField{}
 		for _, child := range e.Content {
 			ret = append(ret, child.ToOP()...)
 		}
+		return ret
 	}
 
+	for i := 0; i < len(e.Content); i += 2 {
+		child := e.Content[i+1]
+		if child.Type == YAMLTypeMetaConfig {
+			continue
+		}
+		ret = append(ret, child.ToOP()...)
+	}
 	return ret
 }
 

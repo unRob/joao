@@ -14,6 +14,7 @@ package config
 
 import (
 	"bytes"
+	"crypto/md5"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -24,6 +25,9 @@ import (
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )
+
+const YAMLTypeSecret string = "!!secret"
+const YAMLTypeMetaConfig string = "!!joao"
 
 type Config struct {
 	Vault string
@@ -55,6 +59,9 @@ var defaultItemFields = []*op.ItemField{
 func (cfg *Config) ToMap() map[string]any {
 	ret := map[string]any{}
 	for _, child := range cfg.Tree.Content {
+		if child.Name() == "" {
+			continue
+		}
 		ret[child.Name()] = child.AsMap()
 	}
 	return ret
@@ -64,21 +71,25 @@ func (cfg *Config) ToOP() *op.Item {
 	sections := []*op.ItemSection{annotationsSection}
 	fields := append([]*op.ItemField{}, defaultItemFields...)
 
-	for _, leaf := range cfg.Tree.Content {
-		if len(leaf.Content) == 0 {
-			fields = append(fields, leaf.ToOP()...)
+	newHash := md5.New()
+	datafields := cfg.Tree.ToOP()
+	for _, field := range datafields {
+		newHash.Write([]byte(field.ID + field.Value))
+	}
+	fields[0].Value = fmt.Sprintf("%x", newHash.Sum(nil))
+	fields = append(fields, datafields...)
+
+	for i := 0; i < len(cfg.Tree.Content); i += 2 {
+		value := cfg.Tree.Content[i+1]
+		if value.Type == YAMLTypeMetaConfig {
 			continue
 		}
 
-		if leaf.Kind != yaml.SequenceNode {
+		if value.Kind == yaml.MappingNode {
 			sections = append(sections, &op.ItemSection{
-				ID:    leaf.Name(),
-				Label: leaf.Name(),
+				ID:    value.Name(),
+				Label: value.Name(),
 			})
-		}
-
-		for _, child := range leaf.Content {
-			fields = append(fields, child.ToOP()...)
 		}
 	}
 
@@ -95,61 +106,57 @@ type opDetails struct {
 	Vault        string `yaml:"vault"`
 	Name         string `yaml:"name"`
 	NameTemplate string `yaml:"nameTemplate"`
+	Repo         string
 }
 
-type opConfig interface {
-	Name() string
-	Vault() string
-}
+// type opConfig interface {
+// 	Name() string
+// 	Vault() string
+// }
 
-type inFileConfig struct {
-	*opDetails
-	*yaml.Node
-}
+// type inFileConfig struct {
+// 	*opDetails
+// 	*yaml.Node
+// }
 
-type virtualConfig struct {
-	*opDetails
-}
+// type virtualConfig struct {
+// 	*opDetails
+// }
 
-func (ifc *inFileConfig) MarshalYAML() (any, error) {
-	return ifc.Node, nil
-}
+// func (ifc *inFileConfig) MarshalYAML() (any, error) {
+// 	return ifc.Node, nil
+// }
 
-func (vc *virtualConfig) MarshalYAML() (any, error) {
-	return nil, nil
-}
+// func (vc *virtualConfig) MarshalYAML() (any, error) {
+// 	return nil, nil
+// }
 
-func (ifc *inFileConfig) UnmarshalYAML(node *yaml.Node) error {
-	ifc.Node = node
-	d := &opDetails{}
+// func (ifc *inFileConfig) UnmarshalYAML(node *yaml.Node) error {
+// 	ifc.Node = node
+// 	d := &opDetails{}
 
-	if err := node.Decode(&d); err != nil {
-		return err
-	}
-	ifc.opDetails = d
+// 	if err := node.Decode(&d); err != nil {
+// 		return err
+// 	}
+// 	ifc.opDetails = d
 
-	return nil
-}
+// 	return nil
+// }
 
-func (ifc *inFileConfig) Name() string {
-	return ifc.opDetails.Name
-}
+// func (ifc *inFileConfig) Name() string {
+// 	return ifc.opDetails.Name
+// }
 
-func (ifc *inFileConfig) Vault() string {
-	return ifc.opDetails.Name
-}
+// func (ifc *inFileConfig) Vault() string {
+// 	return ifc.opDetails.Name
+// }
 
 type singleModeConfig struct {
 	Config *opDetails `yaml:"_config,omitempty"`
 }
 
-type repoModeConfig struct {
-	Repo         string
-	Vault        string `yaml:"vault"`
-	NameTemplate string `yaml:"nameTemplate"`
-}
-
-func ConfigFromFile(path string) (*Config, error) {
+// FromFile reads a path and returns a config.
+func FromFile(path string) (*Config, error) {
 	buf, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("could not read file %s", path)
@@ -165,7 +172,7 @@ func ConfigFromFile(path string) (*Config, error) {
 	}
 	logrus.Debugf("Found name: %s and vault: %s", name, vault)
 
-	cfg, err := ConfigFromYAML(buf)
+	cfg, err := FromYAML(buf)
 	if err != nil {
 		return nil, err
 	}
@@ -175,12 +182,16 @@ func ConfigFromFile(path string) (*Config, error) {
 	return cfg, nil
 }
 
-func ConfigFromYAML(data []byte) (*Config, error) {
+// FromYAML reads yaml bytes and returns a config.
+func FromYAML(data []byte) (*Config, error) {
 	cfg := &Config{
 		Tree: NewEntry("root", yaml.MappingNode),
 	}
 
-	yaml.Unmarshal(data, &cfg.Tree)
+	err := yaml.Unmarshal(data, &cfg.Tree)
+	if err != nil {
+		return nil, err
+	}
 
 	return cfg, nil
 }
@@ -188,7 +199,7 @@ func ConfigFromYAML(data []byte) (*Config, error) {
 func scalarsIn(data map[string]yaml.Node, parents []string) ([]string, error) {
 	keys := []string{}
 	for key, leaf := range data {
-		if key == "_joao" {
+		if key == "_config" && len(parents) == 0 {
 			continue
 		}
 		switch leaf.Kind {
@@ -219,7 +230,6 @@ func scalarsIn(data map[string]yaml.Node, parents []string) ([]string, error) {
 		default:
 			logrus.Fatalf("found unknown %v at %s", leaf.Kind, key)
 		}
-
 	}
 
 	sort.Strings(keys)
@@ -228,12 +238,16 @@ func scalarsIn(data map[string]yaml.Node, parents []string) ([]string, error) {
 
 func KeysFromYAML(data []byte) ([]string, error) {
 	cfg := map[string]yaml.Node{}
-	yaml.Unmarshal(data, &cfg)
+	err := yaml.Unmarshal(data, &cfg)
+	if err != nil {
+		return nil, err
+	}
 
 	return scalarsIn(cfg, []string{})
 }
 
-func ConfigFromOP(item *op.Item) (*Config, error) {
+// FromOP reads a config from an op item and returns a config.
+func FromOP(item *op.Item) (*Config, error) {
 	cfg := &Config{
 		Vault: item.Vault.ID,
 		Name:  item.Title,
@@ -253,8 +267,7 @@ func (cfg *Config) AsYAML(redacted bool) ([]byte, error) {
 	var out bytes.Buffer
 	enc := yaml.NewEncoder(&out)
 	enc.SetIndent(2)
-	err := enc.Encode(cfg)
-	if err != nil {
+	if err := enc.Encode(cfg); err != nil {
 		return nil, fmt.Errorf("could not serialize config as yaml: %w", err)
 	}
 	return out.Bytes(), nil
@@ -290,7 +303,7 @@ func (cfg *Config) Set(path []string, data []byte, isSecret, parseEntry bool) er
 		valueStr = strings.Trim(valueStr, "\n")
 		if isSecret {
 			newEntry.Style = yaml.TaggedStyle
-			newEntry.Tag = "!!secret"
+			newEntry.Tag = YAMLTypeSecret
 		}
 		newEntry.Kind = yaml.ScalarNode
 		newEntry.Value = valueStr

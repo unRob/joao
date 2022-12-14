@@ -20,12 +20,12 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func (c *Config) Lookup(query []string) (*Entry, error) {
+func (cfg *Config) Lookup(query []string) (*Entry, error) {
 	if len(query) == 0 || len(query) == 1 && query[0] == "." {
-		return c.Tree, nil
+		return cfg.Tree, nil
 	}
 
-	entry := c.Tree
+	entry := cfg.Tree
 	for _, part := range query {
 		entry = entry.ChildNamed(part)
 		if entry == nil {
@@ -36,12 +36,12 @@ func (c *Config) Lookup(query []string) (*Entry, error) {
 	return entry, nil
 }
 
-func findRepoConfig(from string) (*repoModeConfig, error) {
+func findRepoConfig(from string) (*opDetails, error) {
 	parts := strings.Split(from, "/")
-	for i := len(parts); i > 0; i -= 1 {
+	for i := len(parts); i > 0; i-- {
 		query := strings.Join(parts[0:i], "/")
 		if bytes, err := os.ReadFile(query + "/.joao.yaml"); err == nil {
-			rmc := &repoModeConfig{Repo: query}
+			rmc := &opDetails{Repo: query}
 			err := yaml.Unmarshal(bytes, rmc)
 			if err != nil {
 				return nil, err

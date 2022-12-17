@@ -16,6 +16,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"sort"
 	"strings"
 
 	"git.rob.mx/nidito/joao/internal/command"
@@ -41,6 +42,8 @@ func keyFinder(cmd *command.Command, currentValue string) ([]string, cobra.Shell
 	if err != nil {
 		return nil, flag, err
 	}
+
+	sort.Strings(keys)
 
 	return keys, cobra.ShellCompDirectiveDefault, nil
 }
@@ -92,6 +95,8 @@ looks at the filesystem or remotely, using 1password (over the CLI if available,
 					for k := range opts {
 						options = append(options, k)
 					}
+					sort.Strings(options)
+
 					return options, flag, err
 				},
 			},

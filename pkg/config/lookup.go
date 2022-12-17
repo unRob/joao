@@ -17,6 +17,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )
 
@@ -51,4 +52,53 @@ func findRepoConfig(from string) (*opDetails, error) {
 	}
 
 	return nil, nil
+}
+
+func scalarsIn(data map[string]yaml.Node, parents []string) ([]string, error) {
+	keys := []string{}
+	for key, leaf := range data {
+		if key == "_config" && len(parents) == 0 {
+			continue
+		}
+		switch leaf.Kind {
+		case yaml.ScalarNode:
+			newKey := strings.Join(append(parents, key), ".")
+			keys = append(keys, newKey)
+		case yaml.MappingNode, yaml.DocumentNode, yaml.SequenceNode:
+			sub := map[string]yaml.Node{}
+			if leaf.Kind == yaml.SequenceNode {
+				list := []yaml.Node{}
+				if err := leaf.Decode(&list); err != nil {
+					return keys, err
+				}
+
+				for idx, child := range list {
+					sub[fmt.Sprintf("%d", idx)] = child
+				}
+			} else {
+				if err := leaf.Decode(&sub); err != nil {
+					return keys, err
+				}
+			}
+			ret, err := scalarsIn(sub, append(parents, key))
+			if err != nil {
+				return keys, err
+			}
+			keys = append(keys, ret...)
+		default:
+			logrus.Fatalf("found unknown %v at %s", leaf.Kind, key)
+		}
+	}
+
+	return keys, nil
+}
+
+func KeysFromYAML(data []byte) ([]string, error) {
+	cfg := map[string]yaml.Node{}
+	err := yaml.Unmarshal(data, &cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	return scalarsIn(cfg, []string{})
 }

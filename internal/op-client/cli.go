@@ -31,7 +31,18 @@ func invoke(vault string, args ...string) (bytes.Buffer, error) {
 	if vault != "" {
 		args = append([]string{"--vault", shellescape.Quote(vault)}, args...)
 	}
-	logrus.Debugf("invoking op with args: %s", args)
+
+	argString := ""
+	for _, arg := range args {
+		parts := strings.Split(arg, "]=")
+		if strings.HasSuffix(parts[0], "[password") {
+			parts[1] = "*****"
+			argString += fmt.Sprintf("%s]=%v", parts[0], parts[1])
+		} else {
+			argString += " " + arg
+		}
+	}
+	logrus.Debugf("invoking op with args: %s", argString)
 	cmd := exec.Command("op", args...)
 
 	cmd.Env = os.Environ()
@@ -98,53 +109,53 @@ const (
 	HashMismatch
 )
 
-func hashesMatch(item *op.Item) (hashResult, error) {
-	stdout, err := invoke(item.Vault.ID, "item", "get", "--fields", "label=password", item.Title)
-	if err != nil {
-		if strings.Contains(stdout.String(), fmt.Sprintf("\"%s\" isn't an item in the \"%s\" vault", item.Vault.ID, item.Title)) {
-			return HashItemMissing, nil
-		}
-
-		return HashItemError, err
+func keyForField(field *op.ItemField) string {
+	name := strings.ReplaceAll(field.Label, ".", "\\.")
+	if field.Section != nil {
+		name = field.Section.ID + "." + name
 	}
-
-	res := HashMismatch
-	if strings.TrimSpace(stdout.String()) == item.GetValue("password") {
-		res = HashMatch
-	}
-	return res, nil
+	return name
 }
 
 func (b *CLI) Update(vault, name string, item *op.Item) error {
-	status, err := hashesMatch(item)
+	remote, err := b.Get(vault, name)
 	if err != nil {
-		return err
+		if strings.Contains(err.Error(), fmt.Sprintf("\"%s\" isn't an item in the ", name)) {
+			return b.create(item)
+		}
+
+		return fmt.Errorf("could not fetch remote 1password item to compare against: %w", err)
 	}
 
-	switch status {
-	case HashItemMissing:
-		return b.create(item)
-	case HashMatch:
+	if remote.GetValue("password") == item.GetValue("password") {
 		logrus.Warn("item is already up to date")
 		return nil
-	case HashMismatch:
-		logrus.Infof("Item %s/%s already exists, updating", item.Vault.ID, item.Title)
 	}
 
+	logrus.Infof("Item %s/%s already exists, updating", item.Vault.ID, item.Title)
+
 	args := []string{"item", "edit", name, "--"}
+	localKeys := map[string]int{}
 
 	for _, field := range item.Fields {
-		kind := strings.ToLower(field.Purpose)
-		if kind != "password" {
+		kind := ""
+		if field.Type == "CONCEALED" {
+			kind = "password"
+		} else {
 			kind = "text"
 		}
-		name := strings.ReplaceAll(field.Label, ".", "\\.")
-		if field.Section != nil {
-			name = field.Section.ID + "." + name
-		}
-
-		key := fmt.Sprintf("%s[%s]", name, kind)
+		keyName := keyForField(field)
+		key := fmt.Sprintf("%s[%s]", keyName, kind)
 		args = append(args, fmt.Sprintf("%s=%s", key, field.Value))
+		localKeys[keyName] = 1
+	}
+
+	for _, field := range remote.Fields {
+		key := keyForField(field)
+		if _, exists := localKeys[key]; !exists {
+			logrus.Debugf("Deleting remote key %s", key)
+			args = append(args, key+"[delete]=")
+		}
 	}
 
 	stdout, err := invoke(vault, args...)

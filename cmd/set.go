@@ -33,10 +33,9 @@ var setCommand = (&command.Command{
 	Path:    []string{"set"},
 	Summary: "updates configuration values",
 	Description: `
-looks at the filesystem or remotely, using 1password (over the CLI if available, or 1password-connect, if configured).
+Updates the value at ﹅PATH﹅ in a local ﹅CONFIG﹅ file. Specify ﹅--secret﹅ to keep the value secret, or ﹅--delete﹅ to delete the key at PATH.
 
-Will read from stdin (or ﹅--from﹅ a file) and store it at the ﹅PATH
-﹅ of ﹅CONFIG﹅, optionally ﹅--flush﹅ing to 1Password.`,
+Will read values from stdin (or ﹅--from﹅ a file) and store it at the ﹅PATH﹅ of ﹅CONFIG﹅, optionally ﹅--flush﹅ing to 1Password.`,
 	Arguments: command.Arguments{
 		{
 			Name:        "config",
@@ -70,12 +69,16 @@ Will read from stdin (or ﹅--from﹅ a file) and store it at the ﹅PATH
 			Description: "Store value as a secret string",
 			Type:        "bool",
 		},
+		"delete": {
+			Description: "Delete the value at the given PATH",
+			Type:        "bool",
+		},
 		"json": {
 			Description: "Treat input as JSON-encoded",
 			Type:        "bool",
 		},
 		"flush": {
-			Description: "Save to 1Password after saving to file",
+			Description: "Save to 1Password after saving to PATH",
 			Type:        "bool",
 		},
 	},
@@ -86,9 +89,22 @@ Will read from stdin (or ﹅--from﹅ a file) and store it at the ﹅PATH
 		var cfg *config.Config
 		var err error
 		secret := cmd.Options["secret"].ToValue().(bool)
+		delete := cmd.Options["delete"].ToValue().(bool)
 		input := cmd.Options["input"].ToValue().(string)
 		parseJSON := cmd.Options["json"].ToValue().(bool)
 		flush := cmd.Options["flush"].ToValue().(bool)
+
+		if secret && delete {
+			return fmt.Errorf("cannot --delete and set a --secret at the same time")
+		}
+
+		if secret && parseJSON {
+			return fmt.Errorf("cannot set a --secret that is JSON encoded, encode individual values instead")
+		}
+
+		if delete && input != "" {
+			logrus.Warn("Ignoring --file while deleting")
+		}
 
 		cfg, err = config.Load(path, false)
 		if err != nil {
@@ -97,23 +113,26 @@ Will read from stdin (or ﹅--from﹅ a file) and store it at the ﹅PATH
 
 		parts := strings.Split(query, ".")
 
-		valueBytes, err := os.ReadFile(input)
-		if err != nil {
-			return err
+		if delete {
+			if err := cfg.Delete(parts); err != nil {
+				return err
+			}
+		} else {
+			valueBytes, err := os.ReadFile(input)
+			if err != nil {
+				return err
+			}
+			if err := cfg.Set(parts, valueBytes, secret, parseJSON); err != nil {
+				return err
+			}
 		}
 
-		if err := cfg.Set(parts, valueBytes, secret, parseJSON); err != nil {
-			return err
-		}
-
-		// b, err := cfg.AsJSON(false, true)
 		b, err := cfg.AsYAML(false)
 		if err != nil {
 			return err
 		}
 
-		var mode fs.FileMode = 644
-		// var mode uint32 =
+		var mode fs.FileMode = 0644
 		if info, err := os.Stat(path); err == nil {
 			mode = info.Mode().Perm()
 		}

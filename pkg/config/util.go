@@ -25,6 +25,17 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+type opDetails struct {
+	Vault        string `yaml:"vault"`
+	Name         string `yaml:"name"`
+	NameTemplate string `yaml:"nameTemplate"`
+	Repo         string
+}
+
+type singleModeConfig struct {
+	Config *opDetails `yaml:"_config,omitempty"`
+}
+
 func argIsYAMLFile(path string) bool {
 	return strings.HasSuffix(path, ".yaml") || strings.HasSuffix(path, ".yml")
 }

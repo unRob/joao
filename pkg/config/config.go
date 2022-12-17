@@ -17,8 +17,6 @@ import (
 	"crypto/md5"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"sort"
 	"strings"
 
 	op "github.com/1Password/connect-sdk-go/onepassword"
@@ -28,12 +26,6 @@ import (
 
 const YAMLTypeSecret string = "!!secret"
 const YAMLTypeMetaConfig string = "!!joao"
-
-type Config struct {
-	Vault string
-	Name  string
-	Tree  *Entry
-}
 
 var redactOutput = false
 var annotationsSection = &op.ItemSection{
@@ -56,6 +48,13 @@ var defaultItemFields = []*op.ItemField{
 	},
 }
 
+type Config struct {
+	Vault string
+	Name  string
+	Tree  *Entry
+}
+
+// ToMap turns a config into a dictionary of strings to values.
 func (cfg *Config) ToMap() map[string]any {
 	ret := map[string]any{}
 	for _, child := range cfg.Tree.Content {
@@ -67,6 +66,7 @@ func (cfg *Config) ToMap() map[string]any {
 	return ret
 }
 
+// ToOp turns a config into an 1Password Item.
 func (cfg *Config) ToOP() *op.Item {
 	sections := []*op.ItemSection{annotationsSection}
 	fields := append([]*op.ItemField{}, defaultItemFields...)
@@ -102,166 +102,12 @@ func (cfg *Config) ToOP() *op.Item {
 	}
 }
 
-type opDetails struct {
-	Vault        string `yaml:"vault"`
-	Name         string `yaml:"name"`
-	NameTemplate string `yaml:"nameTemplate"`
-	Repo         string
-}
-
-// type opConfig interface {
-// 	Name() string
-// 	Vault() string
-// }
-
-// type inFileConfig struct {
-// 	*opDetails
-// 	*yaml.Node
-// }
-
-// type virtualConfig struct {
-// 	*opDetails
-// }
-
-// func (ifc *inFileConfig) MarshalYAML() (any, error) {
-// 	return ifc.Node, nil
-// }
-
-// func (vc *virtualConfig) MarshalYAML() (any, error) {
-// 	return nil, nil
-// }
-
-// func (ifc *inFileConfig) UnmarshalYAML(node *yaml.Node) error {
-// 	ifc.Node = node
-// 	d := &opDetails{}
-
-// 	if err := node.Decode(&d); err != nil {
-// 		return err
-// 	}
-// 	ifc.opDetails = d
-
-// 	return nil
-// }
-
-// func (ifc *inFileConfig) Name() string {
-// 	return ifc.opDetails.Name
-// }
-
-// func (ifc *inFileConfig) Vault() string {
-// 	return ifc.opDetails.Name
-// }
-
-type singleModeConfig struct {
-	Config *opDetails `yaml:"_config,omitempty"`
-}
-
-// FromFile reads a path and returns a config.
-func FromFile(path string) (*Config, error) {
-	buf, err := ioutil.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("could not read file %s", path)
-	}
-
-	if len(buf) == 0 {
-		buf = []byte("{}")
-	}
-
-	name, vault, err := vaultAndNameFrom(path, buf)
-	if err != nil {
-		return nil, err
-	}
-	logrus.Debugf("Found name: %s and vault: %s", name, vault)
-
-	cfg, err := FromYAML(buf)
-	if err != nil {
-		return nil, err
-	}
-	cfg.Name = name
-	cfg.Vault = vault
-
-	return cfg, nil
-}
-
-// FromYAML reads yaml bytes and returns a config.
-func FromYAML(data []byte) (*Config, error) {
-	cfg := &Config{
-		Tree: NewEntry("root", yaml.MappingNode),
-	}
-
-	err := yaml.Unmarshal(data, &cfg.Tree)
-	if err != nil {
-		return nil, err
-	}
-
-	return cfg, nil
-}
-
-func scalarsIn(data map[string]yaml.Node, parents []string) ([]string, error) {
-	keys := []string{}
-	for key, leaf := range data {
-		if key == "_config" && len(parents) == 0 {
-			continue
-		}
-		switch leaf.Kind {
-		case yaml.ScalarNode:
-			newKey := strings.Join(append(parents, key), ".")
-			keys = append(keys, newKey)
-		case yaml.MappingNode, yaml.DocumentNode, yaml.SequenceNode:
-			sub := map[string]yaml.Node{}
-			if leaf.Kind == yaml.SequenceNode {
-				list := []yaml.Node{}
-				if err := leaf.Decode(&list); err != nil {
-					return keys, err
-				}
-
-				for idx, child := range list {
-					sub[fmt.Sprintf("%d", idx)] = child
-				}
-			} else {
-				if err := leaf.Decode(&sub); err != nil {
-					return keys, err
-				}
-			}
-			ret, err := scalarsIn(sub, append(parents, key))
-			if err != nil {
-				return keys, err
-			}
-			keys = append(keys, ret...)
-		default:
-			logrus.Fatalf("found unknown %v at %s", leaf.Kind, key)
-		}
-	}
-
-	sort.Strings(keys)
-	return keys, nil
-}
-
-func KeysFromYAML(data []byte) ([]string, error) {
-	cfg := map[string]yaml.Node{}
-	err := yaml.Unmarshal(data, &cfg)
-	if err != nil {
-		return nil, err
-	}
-
-	return scalarsIn(cfg, []string{})
-}
-
-// FromOP reads a config from an op item and returns a config.
-func FromOP(item *op.Item) (*Config, error) {
-	cfg := &Config{
-		Vault: item.Vault.ID,
-		Name:  item.Title,
-		Tree:  NewEntry("root", yaml.MappingNode),
-	}
-
-	err := cfg.Tree.FromOP(item.Fields)
-	return cfg, err
-}
-
+// MarshalYAML implements `yaml.Marshal``.
 func (cfg *Config) MarshalYAML() (any, error) {
 	return cfg.Tree.MarshalYAML()
 }
 
+// AsYAML returns the config encoded as YAML
 func (cfg *Config) AsYAML(redacted bool) ([]byte, error) {
 	redactOutput = redacted
 	var out bytes.Buffer
@@ -273,6 +119,7 @@ func (cfg *Config) AsYAML(redacted bool) ([]byte, error) {
 	return out.Bytes(), nil
 }
 
+// AsJSON returns the config enconded as JSON, optionally encoding as a 1Password item.
 func (cfg *Config) AsJSON(redacted bool, item bool) ([]byte, error) {
 	var repr any
 	if item {
@@ -289,6 +136,44 @@ func (cfg *Config) AsJSON(redacted bool, item bool) ([]byte, error) {
 	return bytes, nil
 }
 
+// Delete a value at path.
+func (cfg *Config) Delete(path []string) error {
+	parent := cfg.Tree
+
+	for idx, key := range path {
+		if len(path)-1 == idx {
+			newContents := []*Entry{}
+			found := false
+			for idx, child := range parent.Content {
+				if child.Name() == key {
+					found = true
+					logrus.Debugf("Deleting %s", strings.Join(path, "."))
+					if parent.Kind == yaml.DocumentNode || parent.Kind == yaml.MappingNode {
+						newContents = newContents[0 : idx-1]
+					}
+					continue
+				}
+				newContents = append(newContents, child)
+			}
+
+			if !found {
+				return fmt.Errorf("no value found at %s", key)
+			}
+
+			parent.Content = newContents
+			break
+		}
+
+		parent = parent.ChildNamed(key)
+		if parent == nil {
+			return fmt.Errorf("no value found at %s", key)
+		}
+	}
+
+	return nil
+}
+
+// Set a new value, optionally parsing the supplied bytes as a secret or a JSON-encoded value.
 func (cfg *Config) Set(path []string, data []byte, isSecret, parseEntry bool) error {
 	newEntry := NewEntry(path[len(path)-1], yaml.ScalarNode)
 	newEntry.Path = path

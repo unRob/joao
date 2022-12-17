@@ -32,6 +32,9 @@ func isNumeric(s string) bool {
 }
 
 type secretValue string
+
+// Entry is a configuration entry.
+// Basically a copy of a yaml.Node with extra methods
 type Entry struct {
 	Value       string
 	Kind        yaml.Kind
@@ -44,7 +47,8 @@ type Entry struct {
 	HeadComment string
 	Line        int
 	Column      int
-	Type        string
+	// The ShortTag
+	Type string
 }
 
 func NewEntry(name string, kind yaml.Kind) *Entry {
@@ -55,7 +59,7 @@ func NewEntry(name string, kind yaml.Kind) *Entry {
 	}
 }
 
-func CopyFromNode(e *Entry, n *yaml.Node) *Entry {
+func copyFromNode(e *Entry, n *yaml.Node) *Entry {
 	if e.Content == nil {
 		e.Content = []*Entry{}
 	}
@@ -103,13 +107,13 @@ func (e *Entry) SetPath(parent []string, current string) {
 }
 
 func (e *Entry) UnmarshalYAML(node *yaml.Node) error {
-	CopyFromNode(e, node)
+	copyFromNode(e, node)
 
 	switch node.Kind {
 	case yaml.SequenceNode, yaml.ScalarNode:
 		for _, n := range node.Content {
 			sub := &Entry{}
-			CopyFromNode(sub, n)
+			copyFromNode(sub, n)
 			if err := n.Decode(&sub); err != nil {
 				return err
 			}

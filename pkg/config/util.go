@@ -28,12 +28,12 @@ import (
 type opDetails struct {
 	Vault        string `yaml:"vault"`
 	Name         string `yaml:"name"`
-	NameTemplate string `yaml:"nameTemplate"`
+	NameTemplate string `yaml:"nameTemplate"` // nolint: tagliatelle
 	Repo         string
 }
 
 type singleModeConfig struct {
-	Config *opDetails `yaml:"_config,omitempty"`
+	Config *opDetails `yaml:"_config,omitempty"` // nolint: tagliatelle
 }
 
 func argIsYAMLFile(path string) bool {

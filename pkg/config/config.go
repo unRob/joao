@@ -14,13 +14,14 @@ package config
 
 import (
 	"bytes"
-	"crypto/md5"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 
 	op "github.com/1Password/connect-sdk-go/onepassword"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/crypto/blake2b"
 	"gopkg.in/yaml.v3"
 )
 
@@ -66,17 +67,39 @@ func (cfg *Config) ToMap() map[string]any {
 	return ret
 }
 
+func checksum(fields []*op.ItemField) string {
+	newHash, err := blake2b.New256(nil)
+	if err != nil {
+		panic(err)
+	}
+	// newHash := md5.New()
+	df := []string{}
+	for _, field := range fields {
+		if field.ID == "password" || field.ID == "notesPlain" || (field.Section != nil && field.Section.ID == "~annotations") {
+			continue
+		}
+		label := field.Label
+		if field.Section != nil && field.Section.ID != "" {
+			label = field.Section.ID + "." + label
+		}
+		df = append(df, label+field.Value)
+	}
+	sort.Strings(df)
+	newHash.Write([]byte(strings.Join(df, "")))
+	checksum := newHash.Sum(nil)
+
+	return fmt.Sprintf("%x", checksum)
+}
+
 // ToOp turns a config into an 1Password Item.
 func (cfg *Config) ToOP() *op.Item {
 	sections := []*op.ItemSection{annotationsSection}
 	fields := append([]*op.ItemField{}, defaultItemFields...)
 
-	newHash := md5.New()
 	datafields := cfg.Tree.ToOP()
-	for _, field := range datafields {
-		newHash.Write([]byte(field.ID + field.Value))
-	}
-	fields[0].Value = fmt.Sprintf("%x", newHash.Sum(nil))
+	cs := checksum(datafields)
+
+	fields[0].Value = cs
 	fields = append(fields, datafields...)
 
 	for i := 0; i < len(cfg.Tree.Content); i += 2 {
@@ -107,7 +130,7 @@ func (cfg *Config) MarshalYAML() (any, error) {
 	return cfg.Tree.MarshalYAML()
 }
 
-// AsYAML returns the config encoded as YAML
+// AsYAML returns the config encoded as YAML.
 func (cfg *Config) AsYAML(redacted bool) ([]byte, error) {
 	redactOutput = redacted
 	var out bytes.Buffer
@@ -221,21 +244,23 @@ func (cfg *Config) Set(path []string, data []byte, isSecret, parseEntry bool) er
 		}
 
 		if child := entry.ChildNamed(key); child != nil {
-			logrus.Infof("found child named %s, with len %v", key, len(child.Content))
 			entry = child
 			continue
 		}
 
-		logrus.Infof("no child named %s found in %s", key, entry.Name())
 		kind := yaml.MappingNode
 		if isNumeric(key) {
 			kind = yaml.SequenceNode
 		}
 		sub := NewEntry(key, kind)
-		sub.Path = append(entry.Path, key)
+		sub.Path = append(entry.Path, key) // nolint: gocritic
 		entry.Content = append(entry.Content, sub)
 		entry = sub
 	}
 
 	return nil
+}
+
+func (cfg *Config) Merge(other *Config) error {
+	return cfg.Tree.Merge(other.Tree)
 }

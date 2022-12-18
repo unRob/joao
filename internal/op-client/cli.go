@@ -25,7 +25,9 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type CLI struct{}
+type CLI struct {
+	DryRun bool // Won't write to 1Password
+}
 
 func invoke(vault string, args ...string) (bytes.Buffer, error) {
 	if vault != "" {
@@ -74,9 +76,9 @@ func (b *CLI) Get(vault, name string) (*op.Item, error) {
 	return item, nil
 }
 
-func (b *CLI) create(item *op.Item) error {
+func (b *CLI) Create(item *op.Item) error {
 	logrus.Infof("Creating new item: %s/%s", item.Vault.ID, item.Title)
-	cmd := exec.Command("op", "--vault", shellescape.Quote(item.Vault.ID), "item", "create")
+	cmd := exec.Command("op", "--vault", shellescape.Quote(item.Vault.ID), "item", "create") // nolint: gosec
 
 	itemJSON, err := json.Marshal(item)
 	if err != nil {
@@ -89,6 +91,10 @@ func (b *CLI) create(item *op.Item) error {
 	cmd.Stdout = &stdout
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
+	if b.DryRun {
+		logrus.Warnf("dry-run: Would have invoked %v", cmd.Args)
+		return nil
+	}
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("could not create item: %w", err)
 	}
@@ -100,41 +106,8 @@ func (b *CLI) create(item *op.Item) error {
 	return nil
 }
 
-type hashResult int
-
-const (
-	HashItemError hashResult = iota
-	HashItemMissing
-	HashMatch
-	HashMismatch
-)
-
-func keyForField(field *op.ItemField) string {
-	name := strings.ReplaceAll(field.Label, ".", "\\.")
-	if field.Section != nil {
-		name = field.Section.ID + "." + name
-	}
-	return name
-}
-
-func (b *CLI) Update(vault, name string, item *op.Item) error {
-	remote, err := b.Get(vault, name)
-	if err != nil {
-		if strings.Contains(err.Error(), fmt.Sprintf("\"%s\" isn't an item in the ", name)) {
-			return b.create(item)
-		}
-
-		return fmt.Errorf("could not fetch remote 1password item to compare against: %w", err)
-	}
-
-	if remote.GetValue("password") == item.GetValue("password") {
-		logrus.Warn("item is already up to date")
-		return nil
-	}
-
-	logrus.Infof("Item %s/%s already exists, updating", item.Vault.ID, item.Title)
-
-	args := []string{"item", "edit", name, "--"}
+func (b *CLI) Update(item *op.Item, remote *op.Item) error {
+	args := []string{"item", "edit", item.Title, "--"}
 	localKeys := map[string]int{}
 
 	for _, field := range item.Fields {
@@ -158,7 +131,11 @@ func (b *CLI) Update(vault, name string, item *op.Item) error {
 		}
 	}
 
-	stdout, err := invoke(vault, args...)
+	if b.DryRun {
+		logrus.Warnf("dry-run: Would have invoked op %v", args)
+		return nil
+	}
+	stdout, err := invoke(item.Vault.ID, args...)
 	if err != nil {
 		logrus.Errorf("op stderr: %s", stdout.String())
 		return err

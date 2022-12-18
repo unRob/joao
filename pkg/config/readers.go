@@ -70,6 +70,9 @@ func FromOP(item *op.Item) (*Config, error) {
 		Tree:  NewEntry("root", yaml.MappingNode),
 	}
 
+	if cs := checksum(item.Fields); cs != item.GetValue("password") {
+		logrus.Warnf("1Password item changed and checksum was not updated. Expected %s, found %s", cs, item.GetValue("password"))
+	}
 	err := cfg.Tree.FromOP(item.Fields)
 	return cfg, err
 }

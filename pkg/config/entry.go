@@ -14,7 +14,6 @@ package config
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
 	op "github.com/1Password/connect-sdk-go/onepassword"
@@ -31,10 +30,8 @@ func isNumeric(s string) bool {
 	return true
 }
 
-type secretValue string
-
 // Entry is a configuration entry.
-// Basically a copy of a yaml.Node with extra methods
+// Basically a copy of a yaml.Node with extra methods.
 type Entry struct {
 	Value       string
 	Kind        yaml.Kind
@@ -59,7 +56,7 @@ func NewEntry(name string, kind yaml.Kind) *Entry {
 	}
 }
 
-func copyFromNode(e *Entry, n *yaml.Node) *Entry {
+func (e *Entry) copyFromNode(n *yaml.Node) {
 	if e.Content == nil {
 		e.Content = []*Entry{}
 	}
@@ -74,7 +71,6 @@ func copyFromNode(e *Entry, n *yaml.Node) *Entry {
 	e.Line = n.Line
 	e.Column = n.Column
 	e.Type = n.ShortTag()
-	return e
 }
 
 func (e *Entry) String() string {
@@ -91,7 +87,7 @@ func (e *Entry) ChildNamed(name string) *Entry {
 }
 
 func (e *Entry) SetPath(parent []string, current string) {
-	e.Path = append(parent, current)
+	e.Path = append(parent, current) // nolint: gocritic
 	switch e.Kind {
 	case yaml.MappingNode, yaml.DocumentNode:
 		for idx := 0; idx < len(e.Content); idx += 2 {
@@ -101,19 +97,19 @@ func (e *Entry) SetPath(parent []string, current string) {
 		}
 	case yaml.SequenceNode:
 		for idx, child := range e.Content {
-			child.Path = append(e.Path, fmt.Sprintf("%d", idx))
+			child.Path = append(e.Path, fmt.Sprintf("%d", idx)) // nolint: gocritic
 		}
 	}
 }
 
 func (e *Entry) UnmarshalYAML(node *yaml.Node) error {
-	copyFromNode(e, node)
+	e.copyFromNode(node)
 
 	switch node.Kind {
 	case yaml.SequenceNode, yaml.ScalarNode:
 		for _, n := range node.Content {
 			sub := &Entry{}
-			copyFromNode(sub, n)
+			sub.copyFromNode(n)
 			if err := n.Decode(&sub); err != nil {
 				return err
 			}
@@ -145,6 +141,10 @@ func (e *Entry) UnmarshalYAML(node *yaml.Node) error {
 		return fmt.Errorf("unknown yaml type: %v", node.Kind)
 	}
 	return nil
+}
+
+func (e *Entry) IsScalar() bool {
+	return e.Kind != yaml.DocumentNode && e.Kind != yaml.MappingNode && e.Kind != yaml.SequenceNode
 }
 
 func (e *Entry) IsSecret() bool {
@@ -216,8 +216,7 @@ func (e *Entry) FromOP(fields []*op.ItemField) error {
 	annotations := map[string]string{}
 	data := map[string]string{}
 
-	for i := 0; i < len(fields); i++ {
-		field := fields[i]
+	for _, field := range fields {
 		label := field.Label
 		if field.Section != nil {
 			if field.Section.Label == "~annotations" {
@@ -234,35 +233,12 @@ func (e *Entry) FromOP(fields []*op.ItemField) error {
 	}
 
 	for label, valueStr := range data {
-		var value any
-		var err error
 		var style yaml.Style
 		var tag string
 
-		switch annotations[label] {
-		case "bool":
-			value, err = strconv.ParseBool(valueStr)
-			if err != nil {
-				return err
-			}
-		case "int":
-			value, err = strconv.ParseInt(valueStr, 10, 64)
-			if err != nil {
-				return err
-			}
-		case "float":
-			var err error
-			value, err = strconv.ParseFloat(valueStr, 64)
-			if err != nil {
-				return err
-			}
-		case "secret":
-			value = secretValue(value.(string))
+		if annotations[label] == "secret" {
 			style = yaml.TaggedStyle
 			tag = YAMLTypeSecret
-		default:
-			// either no annotation or an unknown value
-			value = valueStr
 		}
 
 		path := strings.Split(label, ".")
@@ -270,7 +246,7 @@ func (e *Entry) FromOP(fields []*op.ItemField) error {
 
 		for idx, key := range path {
 			if idx == len(path)-1 {
-				container.Content = append(container.Content, &Entry{
+				container.Content = append(container.Content, NewEntry(key, yaml.ScalarNode), &Entry{
 					Path:  path,
 					Kind:  yaml.ScalarNode,
 					Value: valueStr,
@@ -289,8 +265,12 @@ func (e *Entry) FromOP(fields []*op.ItemField) error {
 					kind = yaml.SequenceNode
 				}
 				child := NewEntry(key, kind)
-				child.Path = append(container.Path, key)
-				container.Content = append(container.Content, child)
+				child.Path = append(container.Path, key) // nolint: gocritic
+				if isNumeric(key) {
+					container.Content = append(container.Content, child)
+				} else {
+					container.Content = append(container.Content, NewEntry(child.Name(), child.Kind), child)
+				}
 				container = child
 			}
 		}
@@ -305,6 +285,7 @@ func (e *Entry) ToOP() []*op.ItemField {
 
 	if e.Kind == yaml.ScalarNode {
 		name := e.Path[len(e.Path)-1]
+		fullPath := strings.Join(e.Path, ".")
 		if len(e.Path) > 1 {
 			section = &op.ItemSection{ID: e.Path[0]}
 			name = strings.Join(e.Path[1:], ".")
@@ -313,20 +294,20 @@ func (e *Entry) ToOP() []*op.ItemField {
 		fieldType := "STRING"
 		if e.IsSecret() {
 			fieldType = "CONCEALED"
-		} else {
-			if annotationType := e.TypeStr(); annotationType != "" {
-				ret = append(ret, &op.ItemField{
-					ID:      "~annotations." + strings.Join(e.Path, "."),
-					Section: annotationsSection,
-					Label:   name,
-					Type:    "STRING",
-					Value:   annotationType,
-				})
-			}
+		}
+
+		if annotationType := e.TypeStr(); annotationType != "" {
+			ret = append(ret, &op.ItemField{
+				ID:      "~annotations." + fullPath,
+				Section: annotationsSection,
+				Label:   fullPath,
+				Type:    "STRING",
+				Value:   annotationType,
+			})
 		}
 
 		ret = append(ret, &op.ItemField{
-			ID:      strings.Join(e.Path, "."),
+			ID:      fullPath,
 			Section: section,
 			Label:   name,
 			Type:    fieldType,
@@ -384,4 +365,43 @@ func (e *Entry) AsMap() any {
 		ret[child.Name()] = child.AsMap()
 	}
 	return ret
+}
+
+func (e *Entry) Merge(other *Entry) error {
+	if e.IsScalar() && other.IsScalar() {
+		e.Value = other.Value
+		e.Tag = other.Tag
+		e.Kind = other.Kind
+		e.Type = other.Type
+		return nil
+	}
+
+	if e.Kind == yaml.MappingNode || e.Kind == yaml.DocumentNode {
+		for i := 0; i < len(other.Content); i += 2 {
+			remote := other.Content[i+1]
+			local := e.ChildNamed(remote.Name())
+			if local != nil {
+				if err := local.Merge(remote); err != nil {
+					return err
+				}
+			} else {
+				e.Content = append(e.Content, NewEntry(remote.Name(), remote.Kind), remote)
+			}
+		}
+		return nil
+	}
+
+	for _, remote := range other.Content {
+		local := other.ChildNamed(remote.Name())
+		if local != nil {
+			if err := local.Merge(remote); err != nil {
+				return err
+			}
+		} else {
+			logrus.Debugf("adding new collection value at %s", remote.Path)
+			local.Content = append(local.Content, remote)
+		}
+	}
+
+	return nil
 }

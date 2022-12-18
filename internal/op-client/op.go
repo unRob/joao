@@ -13,14 +13,19 @@
 package opclient
 
 import (
+	"fmt"
+	"strings"
+
 	op "github.com/1Password/connect-sdk-go/onepassword"
+	"github.com/sirupsen/logrus"
 )
 
 var client opClient
 
 type opClient interface {
 	Get(vault, name string) (*op.Item, error)
-	Update(vault, name string, item *op.Item) error
+	Update(item *op.Item, remote *op.Item) error
+	Create(item *op.Item) error
 	List(vault, prefix string) ([]string, error)
 }
 
@@ -37,9 +42,32 @@ func Get(vault, name string) (*op.Item, error) {
 }
 
 func Update(vault, name string, item *op.Item) error {
-	return client.Update(vault, name, item)
+	remote, err := client.Get(vault, name)
+	if err != nil {
+		if strings.Contains(err.Error(), fmt.Sprintf("\"%s\" isn't an item in the ", name)) {
+			return client.Create(item)
+		}
+
+		return fmt.Errorf("could not fetch remote 1password item to compare against: %w", err)
+	}
+
+	if remote.GetValue("password") == item.GetValue("password") {
+		logrus.Warn("item is already up to date")
+		return nil
+	}
+
+	logrus.Infof("Item %s/%s already exists, updating", item.Vault.ID, item.Title)
+	return client.Update(item, remote)
 }
 
 func List(vault, prefix string) ([]string, error) {
 	return client.List(vault, prefix)
+}
+
+func keyForField(field *op.ItemField) string {
+	name := strings.ReplaceAll(field.Label, ".", "\\.")
+	if field.Section != nil {
+		name = field.Section.ID + "." + name
+	}
+	return name
 }

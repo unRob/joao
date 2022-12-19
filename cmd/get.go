@@ -19,15 +19,15 @@ import (
 	"sort"
 	"strings"
 
-	"git.rob.mx/nidito/joao/internal/command"
-	"git.rob.mx/nidito/joao/internal/registry"
+	"git.rob.mx/nidito/chinampa"
+	"git.rob.mx/nidito/chinampa/pkg/command"
 	"git.rob.mx/nidito/joao/pkg/config"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
 
 func init() {
-	registry.Register(gCommand)
+	chinampa.Register(gCommand)
 }
 
 func keyFinder(cmd *command.Command, currentValue string) ([]string, cobra.ShellCompDirective, error) {

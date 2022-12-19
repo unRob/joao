@@ -18,15 +18,15 @@ import (
 	"os"
 	"strings"
 
-	"git.rob.mx/nidito/joao/internal/command"
+	"git.rob.mx/nidito/chinampa"
+	"git.rob.mx/nidito/chinampa/pkg/command"
 	opclient "git.rob.mx/nidito/joao/internal/op-client"
-	"git.rob.mx/nidito/joao/internal/registry"
 	"git.rob.mx/nidito/joao/pkg/config"
 	"github.com/sirupsen/logrus"
 )
 
 func init() {
-	registry.Register(setCommand)
+	chinampa.Register(setCommand)
 }
 
 var setCommand = (&command.Command{
@@ -102,7 +102,7 @@ Will read values from stdin (or ﹅--from﹅ a file) and store it at the ﹅PATH
 			return fmt.Errorf("cannot set a --secret that is JSON encoded, encode individual values instead")
 		}
 
-		if delete && input != "" {
+		if delete && input != "/dev/stdin" {
 			logrus.Warn("Ignoring --file while deleting")
 		}
 

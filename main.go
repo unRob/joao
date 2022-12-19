@@ -13,9 +13,11 @@
 package main
 
 import (
+	"os"
+
+	"git.rob.mx/nidito/chinampa"
+	"git.rob.mx/nidito/chinampa/pkg/runtime"
 	_ "git.rob.mx/nidito/joao/cmd"
-	"git.rob.mx/nidito/joao/internal/registry"
-	"git.rob.mx/nidito/joao/internal/runtime"
 	"github.com/sirupsen/logrus"
 )
 
@@ -28,11 +30,13 @@ func main() {
 		ForceColors:            runtime.ColorEnabled(),
 	})
 
-	logrus.SetLevel(logrus.DebugLevel)
+	if runtime.DebugEnabled() {
+		logrus.SetLevel(logrus.DebugLevel)
+		logrus.Debug("Debugging enabled")
+	}
 
-	err := registry.Execute(version)
-
-	if err != nil {
-		logrus.Fatal(err)
+	if err := chinampa.Execute(version); err != nil {
+		logrus.Error(err)
+		os.Exit(2)
 	}
 }

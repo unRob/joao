@@ -15,15 +15,15 @@ package cmd
 import (
 	"fmt"
 
-	"git.rob.mx/nidito/joao/internal/command"
+	"git.rob.mx/nidito/chinampa"
+	"git.rob.mx/nidito/chinampa/pkg/command"
 	opclient "git.rob.mx/nidito/joao/internal/op-client"
-	"git.rob.mx/nidito/joao/internal/registry"
 	"git.rob.mx/nidito/joao/pkg/config"
 	"github.com/sirupsen/logrus"
 )
 
 func init() {
-	registry.Register(flushCommand)
+	chinampa.Register(flushCommand)
 }
 
 var flushCommand = (&command.Command{

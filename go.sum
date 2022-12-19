@@ -1,4 +1,6 @@
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
+git.rob.mx/nidito/chinampa v0.0.0-20221219030434-c622ba72beb5 h1:5ynI2LRpxLD9tfiBLP60ChAvrBFhHytOHGqN7tUZyjc=
+git.rob.mx/nidito/chinampa v0.0.0-20221219030434-c622ba72beb5/go.mod h1:nQlQqIQ6UuP6spFFZvfVT1MhQJYEA7B3Y2EtM2Fha3Y=
 github.com/1Password/connect-sdk-go v1.5.0 h1:F0WJcLSzGg3iXEDY49/ULdszYKsQLGTzn+2cyYXqiyk=
 github.com/1Password/connect-sdk-go v1.5.0/go.mod h1:TdynFeyvaRoackENbJ8RfJokH+WAowAu1MLmUbdMq6s=
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=

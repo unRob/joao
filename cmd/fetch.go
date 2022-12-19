@@ -17,14 +17,14 @@ import (
 	"io/fs"
 	"os"
 
-	"git.rob.mx/nidito/joao/internal/command"
-	"git.rob.mx/nidito/joao/internal/registry"
+	"git.rob.mx/nidito/chinampa"
+	"git.rob.mx/nidito/chinampa/pkg/command"
 	"git.rob.mx/nidito/joao/pkg/config"
 	"github.com/sirupsen/logrus"
 )
 
 func init() {
-	registry.Register(fetchCommand)
+	chinampa.Register(fetchCommand)
 }
 
 var fetchCommand = (&command.Command{

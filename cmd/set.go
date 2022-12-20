@@ -127,7 +127,7 @@ Will read values from stdin (or ﹅--from﹅ a file) and store it at the ﹅PATH
 			}
 		}
 
-		b, err := cfg.AsYAML(false)
+		b, err := cfg.AsYAML()
 		if err != nil {
 			return err
 		}

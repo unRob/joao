@@ -106,7 +106,7 @@ joao flush NAME [--dry-run] [--redact]
 # sync remote secrets to filesystem
 joao fetch NAME [--dry-run]
 # check for differences between local and remote items
-joao diff NAME [--cache]
+joao diff PATH [--cache]
 # initialize a new joao repo
 joao repo init [PATH]
 # list the item names within prefix

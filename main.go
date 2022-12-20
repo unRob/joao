@@ -18,12 +18,12 @@ import (
 	"git.rob.mx/nidito/chinampa"
 	"git.rob.mx/nidito/chinampa/pkg/runtime"
 	_ "git.rob.mx/nidito/joao/cmd"
+	"git.rob.mx/nidito/joao/pkg/version"
 	"github.com/sirupsen/logrus"
 )
 
-var version = "dev"
-
 func main() {
+	// defer profile.Start(profile.MemProfileAllocs, profile.ProfilePath(".")).Stop()
 	logrus.SetFormatter(&logrus.TextFormatter{
 		DisableLevelTruncation: true,
 		DisableTimestamp:       true,
@@ -35,8 +35,8 @@ func main() {
 		logrus.Debug("Debugging enabled")
 	}
 
-	if err := chinampa.Execute(version); err != nil {
-		logrus.Error(err)
+	if err := chinampa.Execute(version.Version); err != nil {
+		logrus.Errorf("total failure: %s", err)
 		os.Exit(2)
 	}
 }

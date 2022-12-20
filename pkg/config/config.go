@@ -13,22 +13,18 @@
 package config
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
-	"sort"
+	"io"
+	"io/ioutil"
+	"os"
+	"os/exec"
 	"strings"
 
 	op "github.com/1Password/connect-sdk-go/onepassword"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/crypto/blake2b"
 	"gopkg.in/yaml.v3"
 )
 
-const YAMLTypeSecret string = "!!secret"
-const YAMLTypeMetaConfig string = "!!joao"
-
-var redactOutput = false
 var annotationsSection = &op.ItemSection{
 	ID:    "~annotations",
 	Label: "~annotations",
@@ -53,110 +49,6 @@ type Config struct {
 	Vault string
 	Name  string
 	Tree  *Entry
-}
-
-// ToMap turns a config into a dictionary of strings to values.
-func (cfg *Config) ToMap() map[string]any {
-	ret := map[string]any{}
-	for _, child := range cfg.Tree.Content {
-		if child.Name() == "" {
-			continue
-		}
-		ret[child.Name()] = child.AsMap()
-	}
-	return ret
-}
-
-func checksum(fields []*op.ItemField) string {
-	newHash, err := blake2b.New256(nil)
-	if err != nil {
-		panic(err)
-	}
-	// newHash := md5.New()
-	df := []string{}
-	for _, field := range fields {
-		if field.ID == "password" || field.ID == "notesPlain" || (field.Section != nil && field.Section.ID == "~annotations") {
-			continue
-		}
-		label := field.Label
-		if field.Section != nil && field.Section.ID != "" {
-			label = field.Section.ID + "." + label
-		}
-		df = append(df, label+field.Value)
-	}
-	sort.Strings(df)
-	newHash.Write([]byte(strings.Join(df, "")))
-	checksum := newHash.Sum(nil)
-
-	return fmt.Sprintf("%x", checksum)
-}
-
-// ToOp turns a config into an 1Password Item.
-func (cfg *Config) ToOP() *op.Item {
-	sections := []*op.ItemSection{annotationsSection}
-	fields := append([]*op.ItemField{}, defaultItemFields...)
-
-	datafields := cfg.Tree.ToOP()
-	cs := checksum(datafields)
-
-	fields[0].Value = cs
-	fields = append(fields, datafields...)
-
-	for i := 0; i < len(cfg.Tree.Content); i += 2 {
-		value := cfg.Tree.Content[i+1]
-		if value.Type == YAMLTypeMetaConfig {
-			continue
-		}
-
-		if value.Kind == yaml.MappingNode {
-			sections = append(sections, &op.ItemSection{
-				ID:    value.Name(),
-				Label: value.Name(),
-			})
-		}
-	}
-
-	return &op.Item{
-		Title:    cfg.Name,
-		Sections: sections,
-		Vault:    op.ItemVault{ID: cfg.Vault},
-		Category: op.Password,
-		Fields:   fields,
-	}
-}
-
-// MarshalYAML implements `yaml.Marshal``.
-func (cfg *Config) MarshalYAML() (any, error) {
-	return cfg.Tree.MarshalYAML()
-}
-
-// AsYAML returns the config encoded as YAML.
-func (cfg *Config) AsYAML(redacted bool) ([]byte, error) {
-	redactOutput = redacted
-	var out bytes.Buffer
-	enc := yaml.NewEncoder(&out)
-	enc.SetIndent(2)
-	if err := enc.Encode(cfg); err != nil {
-		return nil, fmt.Errorf("could not serialize config as yaml: %w", err)
-	}
-	return out.Bytes(), nil
-}
-
-// AsJSON returns the config enconded as JSON, optionally encoding as a 1Password item.
-func (cfg *Config) AsJSON(redacted bool, item bool) ([]byte, error) {
-	var repr any
-	if item {
-		repr = cfg.ToOP()
-	} else {
-		redactOutput = redacted
-		repr = cfg.ToMap()
-	}
-
-	bytes, err := json.Marshal(repr)
-	if err != nil {
-		return nil, fmt.Errorf("could not serialize config as json: %w", err)
-	}
-	return bytes, nil
 }
 
 // Delete a value at path.
@@ -263,4 +155,67 @@ func (cfg *Config) Set(path []string, data []byte, isSecret, parseEntry bool) er
 
 func (cfg *Config) Merge(other *Config) error {
 	return cfg.Tree.Merge(other.Tree)
+}
+
+func (cfg *Config) DiffRemote(path string, stdout io.Writer, stderr io.Writer) error {
+	remote, err := Load(path, true)
+	if err != nil {
+		return err
+	}
+
+	localBytes, err := cfg.AsYAML(OutputModeNoComments, OutputModeSorted, OutputModeNoConfig)
+	if err != nil {
+		return err
+	}
+
+	file1, cleanupLocalDiff, err := tempfile(localBytes)
+	if err != nil {
+		return err
+	}
+	defer cleanupLocalDiff()
+
+	remoteBytes, err := remote.AsYAML(OutputModeNoComments, OutputModeSorted)
+	if err != nil {
+		return err
+	}
+	file2, cleanupRemoteDiff, err := tempfile(remoteBytes)
+	if err != nil {
+		return err
+	}
+	defer cleanupRemoteDiff()
+
+	opPath := fmt.Sprintf("op://%s/%s", cfg.Vault, remote.Name)
+	diff := exec.Command("diff", "-u", "-L", path, file1, "-L", opPath, file2)
+	diff.Env = os.Environ()
+
+	diff.Stdout = stdout
+	diff.Stderr = stderr
+	diff.Run()
+	if diff.ProcessState.ExitCode() > 2 {
+		return fmt.Errorf("diff exited with exit code %d", diff.ProcessState.ExitCode())
+	}
+
+	return nil
+}
+
+func tempfile(data []byte) (string, func(), error) {
+	f, err := ioutil.TempFile("", "joao-diff")
+	if err != nil {
+		return "", nil, err
+	}
+
+	if _, err := f.Write(data); err != nil {
+		return "", nil, err
+	}
+
+	if err := f.Close(); err != nil {
+		return "", nil, err
+	}
+
+	deferFn := func() {
+		if err := os.Remove(f.Name()); err != nil {
+			logrus.Error(err)
+		}
+	}
+	return f.Name(), deferFn, nil
 }

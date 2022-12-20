@@ -53,7 +53,7 @@ func invoke(vault string, args ...string) (bytes.Buffer, error) {
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		return stderr, err
+		return stderr, fmt.Errorf("op exited with %s:\n%s", err, stderr.Bytes())
 	}
 	if cmd.ProcessState.ExitCode() > 0 {
 		return stderr, fmt.Errorf("op exited with %d: %s", cmd.ProcessState.ExitCode(), stderr.Bytes())

@@ -17,11 +17,13 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
+	"sort"
 	"strings"
 	"text/template"
 
-	opClient "git.rob.mx/nidito/joao/internal/op-client"
+	op "github.com/1Password/connect-sdk-go/onepassword"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/crypto/blake2b"
 	"gopkg.in/yaml.v3"
 )
 
@@ -95,36 +97,35 @@ func vaultAndNameFrom(path string, buf []byte) (name string, vault string, err e
 	return nameBuf.String(), rmc.Vault, nil
 }
 
-func Load(ref string, preferRemote bool) (*Config, error) {
-	if preferRemote {
-		name := ref
-		vault := ""
-
-		if argIsYAMLFile(ref) {
-			var err error
-			name, vault, err = vaultAndNameFrom(ref, nil)
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			parts := strings.SplitN(ref, "/", 2)
-			if len(parts) > 1 {
-				vault = parts[0]
-				name = parts[1]
-			}
-		}
-
-		item, err := opClient.Get(vault, name)
-		if err != nil {
-			return nil, err
-		}
-
-		return FromOP(item)
+func checksum(fields []*op.ItemField) string {
+	newHash, err := blake2b.New256(nil)
+	if err != nil {
+		panic(err)
 	}
-
-	if !argIsYAMLFile(ref) {
-		return nil, fmt.Errorf("could not load %s from local as it's not a path", ref)
+	// newHash := md5.New()
+	df := []string{}
+	for _, field := range fields {
+		if field.ID == "password" || field.ID == "notesPlain" || (field.Section != nil && field.Section.ID == "~annotations") {
+			continue
+		}
+		label := field.Label
+		if field.Section != nil && field.Section.ID != "" {
+			label = field.Section.ID + "." + label
+		}
+		df = append(df, label+field.Value)
 	}
+	sort.Strings(df)
+	newHash.Write([]byte(strings.Join(df, "")))
+	checksum := newHash.Sum(nil)
 
-	return FromFile(ref)
+	return fmt.Sprintf("%x", checksum)
+}
+
+func isNumeric(s string) bool {
+	for _, v := range s {
+		if v < '0' || v > '9' {
+			return false
+		}
+	}
+	return true
 }

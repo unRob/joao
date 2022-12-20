@@ -108,7 +108,7 @@ looks at the filesystem or remotely, using 1password (over the CLI if available,
 			Description: "the format to use for rendering output",
 			Default:     "raw",
 			Values: &command.ValueSource{
-				Static: &[]string{"raw", "json", "yaml", "op"},
+				Static: &[]string{"raw", "json", "yaml", "diff-yaml", "op"},
 			},
 		},
 		"redacted": {
@@ -135,8 +135,15 @@ looks at the filesystem or remotely, using 1password (over the CLI if available,
 
 		if query == "" || query == "." {
 			switch format {
-			case "yaml", "raw":
-				bytes, err := cfg.AsYAML(redacted)
+			case "yaml", "raw", "diff-yaml":
+				modes := []config.OutputMode{}
+				if redacted {
+					modes = append(modes, config.OutputModeRedacted)
+				}
+				if format == "diff-yaml" {
+					modes = append(modes, config.OutputModeNoComments, config.OutputModeSorted)
+				}
+				bytes, err := cfg.AsYAML(modes...)
 				if err != nil {
 					return err
 				}

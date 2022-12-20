@@ -14,21 +14,13 @@ package config
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	op "github.com/1Password/connect-sdk-go/onepassword"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
 )
-
-func isNumeric(s string) bool {
-	for _, v := range s {
-		if v < '0' || v > '9' {
-			return false
-		}
-	}
-	return true
-}
 
 // Entry is a configuration entry.
 // Basically a copy of a yaml.Node with extra methods.
@@ -74,7 +66,30 @@ func (e *Entry) copyFromNode(n *yaml.Node) {
 }
 
 func (e *Entry) String() string {
+	if e.IsSecret() && yamlOutput.Has(OutputModeRedacted) {
+		return ""
+	}
 	return e.Value
+}
+
+func (e *Entry) Contents() []*Entry {
+	entries := []*Entry{}
+
+	if (e.Kind == yaml.MappingNode || e.Kind == yaml.DocumentNode) && yamlOutput.Has(OutputModeSorted) {
+		smes := []*sortedMapEntry{}
+		for i := 0; i < len(e.Content); i += 2 {
+			smes = append(smes, &sortedMapEntry{key: e.Content[i], value: e.Content[i+1]})
+		}
+		sortedEntries := &smec{smes}
+		sort.Sort(sortedEntries)
+		for _, v := range sortedEntries.smes {
+			entries = append(entries, v.key, v.value)
+		}
+	} else {
+		entries = e.Content
+	}
+
+	return entries
 }
 
 func (e *Entry) ChildNamed(name string) *Entry {
@@ -169,52 +184,65 @@ func (e *Entry) TypeStr() string {
 }
 
 func (e *Entry) asNode() *yaml.Node {
-	return &yaml.Node{
-		Kind:        e.Kind,
-		Style:       e.Style,
-		Tag:         e.Tag,
-		Value:       e.Value,
-		HeadComment: e.HeadComment,
-		LineComment: e.LineComment,
-		FootComment: e.FootComment,
-		Line:        e.Line,
-		Column:      e.Column,
-		Content:     []*yaml.Node{},
+	n := &yaml.Node{
+		Kind:    e.Kind,
+		Style:   e.Style,
+		Tag:     e.Tag,
+		Value:   e.String(),
+		Line:    e.Line,
+		Column:  e.Column,
+		Content: []*yaml.Node{},
 	}
+
+	if !yamlOutput.Has(OutputModeNoComments) {
+		n.HeadComment = e.HeadComment
+		n.LineComment = e.LineComment
+		n.FootComment = e.FootComment
+	}
+
+	return n
 }
 
 func (e *Entry) MarshalYAML() (*yaml.Node, error) {
 	n := e.asNode()
-	if n.Kind == yaml.ScalarNode {
-		if redactOutput && e.IsSecret() {
-			return &yaml.Node{
-				Kind:        n.Kind,
-				Style:       yaml.TaggedStyle & n.Style,
-				Tag:         n.Tag,
-				Value:       "",
-				HeadComment: n.HeadComment,
-				LineComment: n.LineComment,
-				FootComment: n.FootComment,
-				Line:        n.Line,
-				Column:      n.Column,
-			}, nil
+
+	if e.Kind == yaml.SequenceNode {
+		for _, v := range e.Content {
+			node, err := v.MarshalYAML()
+			if err != nil {
+				return nil, err
+			}
+			n.Content = append(n.Content, node)
 		}
-		return n, nil
+	} else {
+		entries := e.Contents()
+		for i := 0; i < len(entries); i += 2 {
+			key := entries[i]
+			value := entries[i+1]
+			if yamlOutput.Has(OutputModeNoConfig) && value.Type == YAMLTypeMetaConfig {
+				continue
+			}
+
+			keyNode, err := key.MarshalYAML()
+			if err != nil {
+				return nil, err
+			}
+
+			node, err := value.MarshalYAML()
+			if err != nil {
+				return nil, err
+			}
+			n.Content = append(n.Content, keyNode, node)
+		}
 	}
 
-	for _, v := range e.Content {
-		node, err := v.MarshalYAML()
-		if err != nil {
-			return nil, err
-		}
-		n.Content = append(n.Content, node)
-	}
 	return n, nil
 }
 
 func (e *Entry) FromOP(fields []*op.ItemField) error {
 	annotations := map[string]string{}
 	data := map[string]string{}
+	entryKeys := []string{}
 
 	for _, field := range fields {
 		label := field.Label
@@ -229,10 +257,12 @@ func (e *Entry) FromOP(fields []*op.ItemField) error {
 		if label == "password" || label == "notesPlain" {
 			continue
 		}
+		entryKeys = append(entryKeys, label)
 		data[label] = field.Value
 	}
 
-	for label, valueStr := range data {
+	for _, label := range entryKeys {
+		valueStr := data[label]
 		var style yaml.Style
 		var tag string
 
@@ -246,13 +276,32 @@ func (e *Entry) FromOP(fields []*op.ItemField) error {
 
 		for idx, key := range path {
 			if idx == len(path)-1 {
-				container.Content = append(container.Content, NewEntry(key, yaml.ScalarNode), &Entry{
+				if existing := container.ChildNamed(key); existing != nil {
+					existing.Value = valueStr
+					existing.Style = style
+					existing.Tag = tag
+					existing.Kind = yaml.ScalarNode
+					existing.Path = path
+					break
+				}
+
+				newEntry := &Entry{
 					Path:  path,
 					Kind:  yaml.ScalarNode,
 					Value: valueStr,
 					Style: style,
 					Tag:   tag,
-				})
+				}
+				if isNumeric(key) {
+					// logrus.Debugf("hydrating sequence value at %s", path)
+					container.Kind = yaml.SequenceNode
+					container.Content = append(container.Content, newEntry)
+				} else {
+					// logrus.Debugf("hydrating map value at %s", path)
+					keyEntry := NewEntry(key, yaml.ScalarNode)
+					keyEntry.Value = key
+					container.Content = append(container.Content, keyEntry, newEntry)
+				}
 				break
 			}
 
@@ -261,15 +310,20 @@ func (e *Entry) FromOP(fields []*op.ItemField) error {
 				container = subContainer
 			} else {
 				kind := yaml.MappingNode
-				if isNumeric(key) {
+				if idx+1 < len(path)-1 && isNumeric(path[idx+1]) {
+					// logrus.Debugf("creating sequence container for key %s at %s", key, path)
 					kind = yaml.SequenceNode
 				}
 				child := NewEntry(key, kind)
 				child.Path = append(container.Path, key) // nolint: gocritic
-				if isNumeric(key) {
+
+				if kind == yaml.SequenceNode {
 					container.Content = append(container.Content, child)
 				} else {
-					container.Content = append(container.Content, NewEntry(child.Name(), child.Kind), child)
+					// logrus.Debugf("creating mapping container for %s at %s", key, container.Path)
+					keyEntry := NewEntry(child.Name(), yaml.ScalarNode)
+					keyEntry.Value = key
+					container.Content = append(container.Content, keyEntry, child)
 				}
 				container = child
 			}
@@ -343,10 +397,7 @@ func (e *Entry) Name() string {
 
 func (e *Entry) AsMap() any {
 	if len(e.Content) == 0 {
-		if redactOutput && e.IsSecret() {
-			return ""
-		}
-		return e.Value
+		return e.String()
 	}
 
 	if e.Kind == yaml.SequenceNode {

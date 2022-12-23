@@ -15,37 +15,16 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"sort"
 	"strings"
 
 	"git.rob.mx/nidito/chinampa"
 	"git.rob.mx/nidito/chinampa/pkg/command"
 	"git.rob.mx/nidito/joao/pkg/config"
-	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
 
 func init() {
 	chinampa.Register(gCommand)
-}
-
-func keyFinder(cmd *command.Command, currentValue string) ([]string, cobra.ShellCompDirective, error) {
-	flag := cobra.ShellCompDirectiveError
-	file := cmd.Arguments[0].ToString()
-	buf, err := ioutil.ReadFile(file)
-	if err != nil {
-		return nil, flag, fmt.Errorf("could not read file %s", file)
-	}
-
-	keys, err := config.KeysFromYAML(buf)
-	if err != nil {
-		return nil, flag, err
-	}
-
-	sort.Strings(keys)
-
-	return keys, cobra.ShellCompDirectiveDefault, nil
 }
 
 var gCommand = (&command.Command{
@@ -76,29 +55,7 @@ looks at the filesystem or remotely, using 1password (over the CLI if available,
 			Default:     ".",
 			Description: "A dot-delimited path to extract from CONFIG",
 			Values: &command.ValueSource{
-				Func: func(cmd *command.Command, currentValue string) (values []string, flag cobra.ShellCompDirective, err error) {
-					opts := map[string]bool{".": true}
-					options, flag, err := keyFinder(cmd, currentValue)
-					for _, opt := range options {
-						parts := strings.Split(opt, ".")
-						sub := []string{parts[0]}
-						for idx, p := range parts {
-							key := strings.Join(sub, ".")
-							opts[key] = true
-
-							if idx > 0 && idx < len(parts)-1 {
-								sub = append(sub, p)
-							}
-						}
-					}
-
-					for k := range opts {
-						options = append(options, k)
-					}
-					sort.Strings(options)
-
-					return options, flag, err
-				},
+				Func: config.AutocompleteKeysAndParents,
 			},
 		},
 	},

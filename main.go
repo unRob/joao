@@ -23,7 +23,6 @@ import (
 )
 
 func main() {
-	// defer profile.Start(profile.MemProfileAllocs, profile.ProfilePath(".")).Stop()
 	logrus.SetFormatter(&logrus.TextFormatter{
 		DisableLevelTruncation: true,
 		DisableTimestamp:       true,

@@ -56,11 +56,20 @@ const (
 var defaultYamlOutput = &outputOptions{OutputModeRoundTrip}
 var yamlOutput = defaultYamlOutput
 
+func setOutputMode(modes []OutputMode) func() {
+	if len(modes) > 0 {
+		yamlOutput = &outputOptions{}
+		yamlOutput.Set(modes...)
+	}
+	return func() { yamlOutput = defaultYamlOutput }
+}
+
 // ToMap turns a config into a dictionary of strings to values.
-func (cfg *Config) ToMap() map[string]any {
+func (cfg *Config) ToMap(modes ...OutputMode) map[string]any {
+	defer setOutputMode(modes)()
 	ret := map[string]any{}
 	for _, child := range cfg.Tree.Content {
-		if child.Name() == "" {
+		if child.Name() == "" || (yamlOutput.Has(OutputModeNoConfig) && child.Name() == "_config") {
 			continue
 		}
 		ret[child.Name()] = child.AsMap()
@@ -109,13 +118,8 @@ func (cfg *Config) MarshalYAML() (any, error) {
 
 // AsYAML returns the config encoded as YAML.
 func (cfg *Config) AsYAML(modes ...OutputMode) ([]byte, error) {
-	if len(modes) > 0 {
-		defer func() { yamlOutput = defaultYamlOutput }()
-		yamlOutput = &outputOptions{}
-		yamlOutput.Set(modes...)
-	}
-
-	logrus.Debug("Printing as yaml with modes %v", modes)
+	defer setOutputMode(modes)()
+	logrus.Debugf("Printing as yaml with modes %v", yamlOutput)
 
 	var out bytes.Buffer
 	enc := yaml.NewEncoder(&out)
@@ -132,7 +136,12 @@ func (cfg *Config) AsJSON(redacted bool, item bool) ([]byte, error) {
 	if item {
 		repr = cfg.ToOP()
 	} else {
-		repr = cfg.ToMap()
+		modes := []OutputMode{OutputModeNoConfig}
+		if redacted {
+			modes = append(modes, OutputModeRedacted)
+		}
+
+		repr = cfg.ToMap(modes...)
 	}
 
 	bytes, err := json.Marshal(repr)

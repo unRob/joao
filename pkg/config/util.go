@@ -42,15 +42,6 @@ func argIsYAMLFile(path string) bool {
 	return strings.HasSuffix(path, ".yaml") || strings.HasSuffix(path, ".yml")
 }
 
-// func pathToName(path string, prefix string) string {
-// 	comps := strings.SplitN(path, prefix+"/", 2)
-// 	return strings.ReplaceAll(strings.Replace(comps[1], ".yaml", "", 1), "/", ":")
-// }
-
-// func nameToPath(name string) string {
-// 	return "config/" + strings.ReplaceAll(name, ":", "/") + ".yaml"
-// }
-
 func vaultAndNameFrom(path string, buf []byte) (name string, vault string, err error) {
 	smc := &singleModeConfig{}
 	if buf == nil {

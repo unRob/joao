@@ -14,10 +14,14 @@ package config
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
+	"sort"
 	"strings"
 
+	"git.rob.mx/nidito/chinampa/pkg/command"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
 
@@ -101,4 +105,46 @@ func KeysFromYAML(data []byte) ([]string, error) {
 	}
 
 	return scalarsIn(cfg, []string{})
+}
+
+func AutocompleteKeys(cmd *command.Command, currentValue string) ([]string, cobra.ShellCompDirective, error) {
+	flag := cobra.ShellCompDirectiveError
+	file := cmd.Arguments[0].ToString()
+	buf, err := ioutil.ReadFile(file)
+	if err != nil {
+		return nil, flag, fmt.Errorf("could not read file %s", file)
+	}
+
+	keys, err := KeysFromYAML(buf)
+	if err != nil {
+		return nil, flag, err
+	}
+
+	sort.Strings(keys)
+
+	return keys, cobra.ShellCompDirectiveDefault, nil
+}
+
+func AutocompleteKeysAndParents(cmd *command.Command, currentValue string) (values []string, flag cobra.ShellCompDirective, err error) {
+	opts := map[string]bool{".": true}
+	options, flag, err := AutocompleteKeys(cmd, currentValue)
+	for _, opt := range options {
+		parts := strings.Split(opt, ".")
+		sub := []string{parts[0]}
+		for idx, p := range parts {
+			key := strings.Join(sub, ".")
+			opts[key] = true
+
+			if idx > 0 && idx < len(parts)-1 {
+				sub = append(sub, p)
+			}
+		}
+	}
+
+	for k := range opts {
+		options = append(options, k)
+	}
+	sort.Strings(options)
+
+	return options, flag, err
 }

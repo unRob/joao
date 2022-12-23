@@ -35,7 +35,8 @@ var setCommand = (&command.Command{
 	Description: `
 Updates the value at ﹅PATH﹅ in a local ﹅CONFIG﹅ file. Specify ﹅--secret﹅ to keep the value secret, or ﹅--delete﹅ to delete the key at PATH.
 
-Will read values from stdin (or ﹅--from﹅ a file) and store it at the ﹅PATH﹅ of ﹅CONFIG﹅, optionally ﹅--flush﹅ing to 1Password.`,
+Will read values from stdin (or ﹅--from﹅ a file) and store it at the ﹅PATH﹅ of ﹅CONFIG﹅, optionally ﹅--flush﹅ing to 1Password.
+`,
 	Arguments: command.Arguments{
 		{
 			Name:        "config",
@@ -52,7 +53,7 @@ Will read values from stdin (or ﹅--from﹅ a file) and store it at the ﹅PATH
 			Values: &command.ValueSource{
 				SuggestRaw: true,
 				Suggestion: true,
-				Func:       keyFinder,
+				Func:       config.AutocompleteKeys,
 			},
 		},
 	},

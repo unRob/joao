@@ -397,6 +397,29 @@ func (e *Entry) Name() string {
 
 func (e *Entry) AsMap() any {
 	if len(e.Content) == 0 {
+		switch e.TypeStr() {
+		case "bool":
+			var boolVal bool
+			err := e.asNode().Decode(&boolVal)
+			if err != nil {
+				panic(fmt.Sprintf("could not encode boolean at %s, %s", e.Path, err))
+			}
+			return boolVal
+		case "int":
+			var intVal uint64
+			err := e.asNode().Decode(&intVal)
+			if err != nil {
+				panic(fmt.Sprintf("could not encode int at %s, %s", e.Path, err))
+			}
+			return intVal
+		case "float":
+			var floatVal float64
+			err := e.asNode().Decode(&floatVal)
+			if err != nil {
+				panic(fmt.Sprintf("could not encode float at %s, %s", e.Path, err))
+			}
+			return floatVal
+		}
 		return e.String()
 	}
 

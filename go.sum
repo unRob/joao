@@ -1,6 +1,6 @@
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
-git.rob.mx/nidito/chinampa v0.0.0-20221223052958-26e00210aa8f h1:8u1lhuu5CLvE7nKV/2Uf0QCCLyUePnhb3wgZyuA+M6c=
-git.rob.mx/nidito/chinampa v0.0.0-20221223052958-26e00210aa8f/go.mod h1:nQlQqIQ6UuP6spFFZvfVT1MhQJYEA7B3Y2EtM2Fha3Y=
+git.rob.mx/nidito/chinampa v0.0.0-20221231055324-8ea5f42ef848 h1:Nvyo7qK6oVLWQ2aHRtQ5AAMcVEue51Wr+hxBF4OzMkE=
+git.rob.mx/nidito/chinampa v0.0.0-20221231055324-8ea5f42ef848/go.mod h1:jZwWmhBRfjJjp2jwM/+jIGgfWLQPudgAah+wKCKjBfk=
 github.com/1Password/connect-sdk-go v1.5.0 h1:F0WJcLSzGg3iXEDY49/ULdszYKsQLGTzn+2cyYXqiyk=
 github.com/1Password/connect-sdk-go v1.5.0/go.mod h1:TdynFeyvaRoackENbJ8RfJokH+WAowAu1MLmUbdMq6s=
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=

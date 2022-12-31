@@ -1,15 +1,5 @@
 // Copyright © 2022 Roberto Hidalgo <joao@un.rob.mx>
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-// http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 package config
 
 import (
@@ -107,7 +97,7 @@ func KeysFromYAML(data []byte) ([]string, error) {
 	return scalarsIn(cfg, []string{})
 }
 
-func AutocompleteKeys(cmd *command.Command, currentValue string) ([]string, cobra.ShellCompDirective, error) {
+func AutocompleteKeys(cmd *command.Command, currentValue, config string) ([]string, cobra.ShellCompDirective, error) {
 	flag := cobra.ShellCompDirectiveError
 	file := cmd.Arguments[0].ToString()
 	buf, err := ioutil.ReadFile(file)
@@ -125,9 +115,9 @@ func AutocompleteKeys(cmd *command.Command, currentValue string) ([]string, cobr
 	return keys, cobra.ShellCompDirectiveDefault, nil
 }
 
-func AutocompleteKeysAndParents(cmd *command.Command, currentValue string) (values []string, flag cobra.ShellCompDirective, err error) {
+func AutocompleteKeysAndParents(cmd *command.Command, currentValue string, config string) (values []string, flag cobra.ShellCompDirective, err error) {
 	opts := map[string]bool{".": true}
-	options, flag, err := AutocompleteKeys(cmd, currentValue)
+	options, flag, err := AutocompleteKeys(cmd, currentValue, "")
 	for _, opt := range options {
 		parts := strings.Split(opt, ".")
 		sub := []string{parts[0]}

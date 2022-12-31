@@ -2,8 +2,10 @@ module git.rob.mx/nidito/joao
 
 go 1.18
 
+// replace git.rob.mx/nidito/chinampa => /Users/roberto/src/chinampa
+
 require (
-	git.rob.mx/nidito/chinampa v0.0.0-20221223052958-26e00210aa8f
+	git.rob.mx/nidito/chinampa v0.0.0-20221231055324-8ea5f42ef848
 	github.com/1Password/connect-sdk-go v1.5.0
 	github.com/alessio/shellescape v1.4.1
 	github.com/hashicorp/errwrap v1.1.0

@@ -1,24 +1,28 @@
 # `joao`
 
-a very wip configuration manager. keep config as YAML in the filesystem, backs it up to 1password. Makes it available to services via 1Password Connect + vault.
+A very wip configuration manager. Keeps config entries encoded as YAML in the filesystem, backs it up to 1Password, and syncs scrubbed copies to git. robots consume entries via 1Password Connect + Vault.
 
 ## Why
 
 So I wanted to operate on my configuration mess...
 
 - With a workflow something like [SOPS](https://github.com/mozilla/sops)',
-- but that talks UNIX like [go-config-yourself](https://github.com/unRob/go-config-yourself) (plus it's later `bash` + `jq` + `yq` [re-implementation](https://github.com/unRob/nidito/tree/0812e0caf6d81dd06b740701c3e95a2aeabd86de/.milpa/commands/nidito/config)'s multi-storage improvements),
-- [git-crypt](https://github.com/AGWA/git-crypt)'s sweet git filters,
-- compatibility with [1Password's neat ecosystem](https://developer.1password.com/), and finally
-- a way to make it all available through Hashicorp's [Vault](https://vaultproject.io/) without touching git
+- but that talks UNIX, like [go-config-yourself](https://github.com/unRob/go-config-yourself) (plus its later `bash` + `jq` + `yq` [re-implementation](https://github.com/unRob/nidito/tree/0812e0caf6d81dd06b740701c3e95a2aeabd86de/.milpa/commands/nidito/config)'s multi-storage improvements),
+- That emulates [git-crypt](https://github.com/AGWA/git-crypt)'s sweet git filters,
+- and plays nice with [1Password's neat ecosystem](https://developer.1password.com/),
+- as well as Hashicorp's [Vault](https://vaultproject.io/),
+- but is still just files, folders and git for all I care.
 
-So I set to write me, yet again, some configuration toolchain that:
+And thus, I set to write me, yet again, some configuration toolchain that:
 
-- Allows the _structure_ of config trees to live happily in the filesystem: that is, I like to structure the configuration values I operate with as nested trees, and want a tool that understands these.
-- Keeps secrets off remote repositories: I really dig `git-crypt`'s filters, not quite sure about how to safely operate them yet...
-- Makes it easy to edit locally, as well as on web and native apps: I mean, it's YAML locally, and 1Password's tools are pretty great for quick edits.
-- Operates on configuration trees, wether from a single file or a set of them, with ease: my home+cloud DC needs a lot of configuration that feels weird to keep in a single file; my one-off services don't really need the whole folder structure. I don't wanna use two tools.
+- Allows the _structure_ of config trees to live happily **in the filesystem**: my home+cloud DC uses a lot of configuration spread over multiple files, one-off services don't really need the whole folder structure—I want a single tool to handle both.
+- Prevents _secrets_ from ending up in **remote repositories**: I really dig `git-crypt`'s filters, not quite sure about how to safely operate them yet...
+- Makes it **easy to edit** entries locally, as well as on the go: Easy for me to R/W, so YAML files, and 1Password's tools are pretty great for quick edits remotely.
 - Is capable of bootstrapping other secret mangement processes: A single binary can talk to `op`'s CLI (hello, touch ID on macos!), to a 1password-connect server, and to vault as a plugin.
+
+For a deeper dive on these points above, check out my [docs/letter-to-secret-santa.md](docs/letter-to-secret-santa.md).
+
+---
 
 ## Configuration
 
@@ -37,7 +41,10 @@ The ideal workflow is:
 
 ---
 
-`joao` operates on two modes, **repo** and **single-file**. Repo mode is useful when keeping all configurations in a single folder and expecting their filenames to map to their item names. Single-file mode is useful when a single file contains all of the desired configuration, and its 1Password details are better kept in that same file.
+`joao` operates on two modes, **repo** and **single-file**.
+
+- **Repo** mode is useful to have multiple configuration files in a folder structure while configuring their 1Password mappings (vault and item names) in a single file.
+- **Single-file** mode is useful when a single file contains all of the desired configuration, and its 1Password mapping is defined in that same file.
 
 ### Repo mode
 
@@ -47,10 +54,9 @@ Basically, configs are kept in a directory and their relative path maps to their
 # config/.joao.yaml
 # the 1password vault to use as storage
 vault: infra
-# the optional prefix to prepend to all configs from this directory
-# without it, config/host/juazeiro.yaml turns into host:juazeiro
-# with `bahianos` specified, name would be bahianos:host:juazeiro
-# prefix: bahianos
+# the optional nameTemplate is a go-template specifying the desired items' names
+# turns config/host/juazeiro.yaml to host:juazeiro
+nameTemplate: '{{ DirName }}:{{ FileName}}'
 ```
 
 ```yaml
@@ -73,11 +79,11 @@ token:
 
 ### Single file mode
 
-In single file mode, `joao` expects every file to have a `_joao: !!config` key with a vault name, and a name for the 1Password item. 
+In single file mode, `joao` expects every file to have a `_joao: !!config` key with a vault name, and a name for the 1Password item.
 
 ```yaml
 # src/git/config.yaml
-_config: !!joao 
+_config: !!joao
   vault: bahianos
   name: service:git
 smtp:
@@ -94,7 +100,7 @@ smtp:
 # NAME can be either a filesystem path or a colon delimited item name
 # for example: config/host/juazeiro.yaml or [op-vault-name/]host:juazeiro
 
-# DOT_DELIMITED_PATH is 
+# DOT_DELIMITED_PATH is
 # for example: tls.cert, roles.0, dc
 
 # get a single value/tree from a single item/file
@@ -113,7 +119,7 @@ joao repo init [PATH]
 joao repo list [PREFIX]
 # print the repo config root
 joao repo root
-# 
+#
 joao repo status
 joao repo filter clean FILE
 joao repo filter diff PATH OLD_FILE OLD_SHA OLD_MODE NEW_FILE NEW_SHA NEW_MODE

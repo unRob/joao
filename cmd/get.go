@@ -7,17 +7,12 @@ import (
 	"fmt"
 	"strings"
 
-	"git.rob.mx/nidito/chinampa"
 	"git.rob.mx/nidito/chinampa/pkg/command"
 	"git.rob.mx/nidito/joao/pkg/config"
 	"gopkg.in/yaml.v3"
 )
 
-func init() {
-	chinampa.Register(gCommand)
-}
-
-var gCommand = (&command.Command{
+var Get = &command.Command{
 	Path:    []string{"get"},
 	Summary: "retrieves configuration",
 	Description: `
@@ -60,10 +55,12 @@ looks at the filesystem or remotely, using 1password (over the CLI if available,
 		"redacted": {
 			Description: "Do not print secret values",
 			Type:        "bool",
+			Default:     false,
 		},
 		"remote": {
 			Description: "Get values from 1password",
 			Type:        "bool",
+			Default:     false,
 		},
 	},
 	Action: func(cmd *command.Command) error {
@@ -136,4 +133,4 @@ looks at the filesystem or remotely, using 1password (over the CLI if available,
 		_, err = cmd.Cobra.OutOrStdout().Write(bytes)
 		return err
 	},
-}).SetBindings()
+}

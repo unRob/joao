@@ -3,17 +3,12 @@
 package cmd
 
 import (
-	"git.rob.mx/nidito/chinampa"
 	"git.rob.mx/nidito/chinampa/pkg/command"
 	"git.rob.mx/nidito/joao/pkg/config"
 	"github.com/sirupsen/logrus"
 )
 
-func init() {
-	chinampa.Register(diffCommand)
-}
-
-var diffCommand = (&command.Command{
+var Diff = &command.Command{
 	Path:        []string{"diff"},
 	Summary:     "Shows differences between local and remote configs",
 	Description: `Fetches remote and compares against local, ignoring comments but respecting order.`,
@@ -57,4 +52,4 @@ var diffCommand = (&command.Command{
 		logrus.Info("Done")
 		return nil
 	},
-}).SetBindings()
+}

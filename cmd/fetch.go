@@ -7,17 +7,12 @@ import (
 	"io/fs"
 	"os"
 
-	"git.rob.mx/nidito/chinampa"
 	"git.rob.mx/nidito/chinampa/pkg/command"
 	"git.rob.mx/nidito/joao/pkg/config"
 	"github.com/sirupsen/logrus"
 )
 
-func init() {
-	chinampa.Register(fetchCommand)
-}
-
-var fetchCommand = (&command.Command{
+var Fetch = &command.Command{
 	Path:        []string{"fetch"},
 	Summary:     "fetches configuration values from 1Password",
 	Description: `Fetches secrets for local ﹅CONFIG﹅ files from 1Password.`,
@@ -79,4 +74,4 @@ var fetchCommand = (&command.Command{
 		logrus.Info("Done")
 		return nil
 	},
-}).SetBindings()
+}

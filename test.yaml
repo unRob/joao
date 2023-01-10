@@ -1,0 +1,18 @@
+_config: !!joao
+  name: some:test
+  vault: example
+# not sorted on purpose
+int: 1 # line
+# foot
+string: "pato"
+bool: false
+secret: !!secret very secret
+nested:
+  string: quem
+  int: 1
+  secret: !!secret very secret
+  bool: true
+list:
+  - one
+  - two
+  - three

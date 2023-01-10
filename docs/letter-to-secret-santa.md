@@ -27,8 +27,8 @@ smtp:
 There's many entries in that tree, and the SMTP password value would be addressed with:
 
 - `joao get api/config.prod.yaml smtp.password`
-- `op item get op://prod/api/smtp.password`
-- `vault kv read config/kv/prod/api/smtp.password`
+- `op item get op://prod/api/smtp/password`
+- `vault kv read -field=smtp.password config/tree/prod/api`
 
 ## Source of truth is hard
 

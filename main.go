@@ -7,7 +7,7 @@ import (
 
 	"git.rob.mx/nidito/chinampa"
 	"git.rob.mx/nidito/chinampa/pkg/runtime"
-	_ "git.rob.mx/nidito/joao/cmd"
+	"git.rob.mx/nidito/joao/cmd"
 	"git.rob.mx/nidito/joao/pkg/version"
 	"github.com/sirupsen/logrus"
 )
@@ -24,11 +24,25 @@ func main() {
 		logrus.Debug("Debugging enabled")
 	}
 
+	chinampa.Register(cmd.Get)
+	chinampa.Register(cmd.Set)
+	chinampa.Register(cmd.Diff)
+	chinampa.Register(cmd.Fetch)
+	chinampa.Register(cmd.Flush)
+	chinampa.Register(cmd.Plugin)
+
 	if err := chinampa.Execute(chinampa.Config{
-		Name:        "joao",
-		Summary:     "Helps organize config for roberto",
-		Description: `﹅joao﹅ makes yaml, json, 1password and vault play along nicely.`,
-		Version:     version.Version,
+		Name:    "joao",
+		Summary: "A very WIP configuration manager",
+		Description: `﹅joao﹅ makes yaml, json, 1Password and Hashicorp Vault play along nicely.
+
+Keeps config entries encoded as YAML in the filesystem, backs it up to 1Password, and syncs scrubbed copies to git. Robots consume entries via 1Password Connect + Vault.
+
+Schema for configuration and non-secret values live along the code, and are pushed to remote origins. Secrets can optionally and temporally be flushed to disk for editing or other sorts of operations. Git filters are available to prevent secrets from being pushed to remotes. Secrets are grouped into files, and every file gets its own 1Password item.
+
+Secret values are specified using the ﹅!!secret﹅ YAML tag.
+`,
+		Version: version.Version,
 	}); err != nil {
 		logrus.Errorf("total failure: %s", err)
 		os.Exit(2)

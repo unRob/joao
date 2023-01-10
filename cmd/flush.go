@@ -5,18 +5,13 @@ package cmd
 import (
 	"fmt"
 
-	"git.rob.mx/nidito/chinampa"
 	"git.rob.mx/nidito/chinampa/pkg/command"
 	opclient "git.rob.mx/nidito/joao/internal/op-client"
 	"git.rob.mx/nidito/joao/pkg/config"
 	"github.com/sirupsen/logrus"
 )
 
-func init() {
-	chinampa.Register(flushCommand)
-}
-
-var flushCommand = (&command.Command{
+var Flush = &command.Command{
 	Path:        []string{"flush"},
 	Summary:     "flush configuration values to 1Password",
 	Description: `Creates or updates existing items for every ﹅CONFIG﹅ file provided. Does not delete 1Password items.`,
@@ -58,4 +53,4 @@ var flushCommand = (&command.Command{
 		logrus.Info("Done")
 		return nil
 	},
-}).SetBindings()
+}

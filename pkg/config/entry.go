@@ -255,10 +255,13 @@ func (e *Entry) FromOP(fields []*op.ItemField) error {
 		valueStr := data[label]
 		var style yaml.Style
 		var tag string
+		kind := ""
 
 		if annotations[label] == "secret" {
 			style = yaml.TaggedStyle
 			tag = YAMLTypeSecret
+		} else if k, ok := annotations[label]; ok {
+			kind = "!!" + k
 		}
 
 		path := strings.Split(label, ".")
@@ -272,6 +275,7 @@ func (e *Entry) FromOP(fields []*op.ItemField) error {
 					existing.Tag = tag
 					existing.Kind = yaml.ScalarNode
 					existing.Path = path
+					existing.Type = kind
 					break
 				}
 
@@ -281,6 +285,7 @@ func (e *Entry) FromOP(fields []*op.ItemField) error {
 					Value: valueStr,
 					Style: style,
 					Tag:   tag,
+					Type:  kind,
 				}
 				if isNumeric(key) {
 					// logrus.Debugf("hydrating sequence value at %s", path)

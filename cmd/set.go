@@ -8,18 +8,13 @@ import (
 	"os"
 	"strings"
 
-	"git.rob.mx/nidito/chinampa"
 	"git.rob.mx/nidito/chinampa/pkg/command"
 	opclient "git.rob.mx/nidito/joao/internal/op-client"
 	"git.rob.mx/nidito/joao/pkg/config"
 	"github.com/sirupsen/logrus"
 )
 
-func init() {
-	chinampa.Register(setCommand)
-}
-
-var setCommand = (&command.Command{
+var Set = &command.Command{
 	Path:    []string{"set"},
 	Summary: "updates configuration values",
 	Description: `
@@ -141,4 +136,4 @@ Will read values from stdin (or ﹅--from﹅ a file) and store it at the ﹅PATH
 		logrus.Info("Done")
 		return err
 	},
-}).SetBindings()
+}

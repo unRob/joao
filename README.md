@@ -113,15 +113,18 @@ joao flush NAME [--dry-run] [--redact]
 joao fetch NAME [--dry-run]
 # check for differences between local and remote items
 joao diff PATH [--cache]
-# initialize a new joao repo
-joao repo init [PATH]
-# list the item names within prefix
-joao repo list [PREFIX]
 # print the repo config root
-joao repo root
-#
-joao repo status
-joao repo filter clean FILE
-joao repo filter diff PATH OLD_FILE OLD_SHA OLD_MODE NEW_FILE NEW_SHA NEW_MODE
-joao repo filter smudge FILE
+# tbd
+# initialize a new joao repo
+# joao repo init [PATH]
+# list the item names within prefix
+# joao repo list [PREFIX]
+# joao repo root
+# joao repo status
+# joao repo filter clean FILE
+# joao repo filter diff PATH OLD_FILE OLD_SHA OLD_MODE NEW_FILE NEW_SHA NEW_MODE
+# joao repo filter smudge FILE
+
+# get instructions to run as a vault plugin:
+joao vault server --help
 ```

@@ -193,6 +193,12 @@ func (cfg *Config) DiffRemote(path string, stdout io.Writer, stderr io.Writer) e
 	diff.Stderr = stderr
 
 	if err := diff.Run(); err != nil {
+		if _, ok := err.(*exec.ExitError); ok {
+			if diff.ProcessState.ExitCode() == 1 {
+				return nil
+			}
+
+		}
 		return fmt.Errorf("diff could not run: %w", err)
 	}
 

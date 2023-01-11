@@ -24,12 +24,15 @@ func main() {
 		logrus.Debug("Debugging enabled")
 	}
 
-	chinampa.Register(cmd.Get)
-	chinampa.Register(cmd.Set)
-	chinampa.Register(cmd.Diff)
-	chinampa.Register(cmd.Fetch)
-	chinampa.Register(cmd.Flush)
-	chinampa.Register(cmd.Plugin)
+	chinampa.Register(
+		cmd.Get,
+		cmd.Set,
+		cmd.Diff,
+		cmd.Fetch,
+		cmd.Flush,
+		cmd.Plugin,
+	)
+	chinampa.Register(cmd.GitFilters...)
 
 	if err := chinampa.Execute(chinampa.Config{
 		Name:    "joao",

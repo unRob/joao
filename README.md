@@ -2,6 +2,36 @@
 
 A very wip configuration manager. Keeps config entries encoded as YAML in the filesystem, backs it up to 1Password, and syncs scrubbed copies to git. robots consume entries via 1Password Connect + Vault.
 
+## Usage
+
+```sh
+# PATH refers to a filesystem path
+# examples: config/host/juazeiro.yaml, service/gitea/config.joao.yaml
+
+# QUERY refers to a sequence of keys delimited by dots
+# examples: tls.cert, roles.0, dc, . (literal dot meaning the whole thing)
+
+# there's better help available within each command, try:
+joao get --help
+
+# get a single value/tree from a single item/file
+joao get [--output|-o=(raw|json|yaml|op)] [--remote] PATH [QUERY]
+# set/update a single value in a single item/file
+joao set [--secret] [--flush] [--input=/path/to/input|<<<"value"] PATH QUERY
+# sync local changes upstream
+joao flush [--dry-run] [--redact] PATH
+# sync remote secrets to filesystem
+joao fetch [--dry-run] PATH
+# check for differences between local and remote items
+joao diff [--cache] PATH
+
+# show information on the git integration
+joao git-filter
+
+# show information on the vault integration
+joao vault server --help
+```
+
 ## Why
 
 So I wanted to operate on my configuration mess...
@@ -94,37 +124,85 @@ smtp:
 
 ```
 
-## Usage
+## git integration
+
+In order to store configuration files within a git repository while keeping secrets off remote copies, `joao` provides git filters.
+
+To install them, **every collaborator** would need to run:
 
 ```sh
-# NAME can be either a filesystem path or a colon delimited item name
-# for example: config/host/juazeiro.yaml or [op-vault-name/]host:juazeiro
+# setup filters in your local copy of the repo:
+# this runs when you check in a file (i.e. about to commit a config file)
+# it will flush secrets to 1password before removing secrets from the file on disk
+git config filter.joao.clean "joao git-filter clean --flush %f"
+# this step runs after checkout (i.e. pulling changes)
+# it simply outputs the file as-is on disk
+git config filter.joao.smudge cat
+# let's enforce these filters
+git config filter.joao.required true
 
-# DOT_DELIMITED_PATH is
-# for example: tls.cert, roles.0, dc
-
-# get a single value/tree from a single item/file
-joao get NAME [--output|-o=(raw|json|yaml|op)] [--remote] [jq expr]
-# set/update a single value in a single item/file
-joao set NAME DOT_DELIMITED_PATH [--secret] [--flush] [--input=/path/to/input|<<<"value"]
-# sync local changes upstream
-joao flush NAME [--dry-run] [--redact]
-# sync remote secrets to filesystem
-joao fetch NAME [--dry-run]
-# check for differences between local and remote items
-joao diff PATH [--cache]
-# print the repo config root
-# tbd
-# initialize a new joao repo
-# joao repo init [PATH]
-# list the item names within prefix
-# joao repo list [PREFIX]
-# joao repo root
-# joao repo status
-# joao repo filter clean FILE
-# joao repo filter diff PATH OLD_FILE OLD_SHA OLD_MODE NEW_FILE NEW_SHA NEW_MODE
-# joao repo filter smudge FILE
-
-# get instructions to run as a vault plugin:
-joao vault server --help
+# optionally, configure a diff filter to show changes as would be commited to git
+# this does not modify the original file on disk
+git config diff.joao.textconv "joao git-filter diff"
 ```
+
+Then, **only once**, we need to specify which files to apply the filters and diff commands to:
+
+```sh
+# adds diff and filter attributes for config files ending with .joao.yaml
+echo '**/*.joao.yaml filter=joao diff=joao' >> .gitattributes
+# finally, commit and push these attributes
+git add .gitattributes
+git commit -m "installing joao attributes"
+git push origin main
+```
+
+See:
+  - https://git-scm.com/docs/gitattributes#_filter
+  - https://git-scm.com/docs/gitattributes#_diff
+
+## vault integration
+
+`joao` can run as a plugin to Hashicorp Vault, and make whole configuration entries available—secrets and all—through the Vault API.
+
+To install, download `joao` to the machine running `vault` at the `plugin_directory`, as specified by vault's config. The installed `joao` executable needs to be executable for the user running vault only.
+
+### Configuration
+```sh
+export VAULT_PLUGIN_DIR=/var/lib/vault/plugins
+chmod 700 "$VAULT_PLUGIN_DIR/joao"
+export PLUGIN_SHA="$(openssl dgst -sha256 -hex "$VAULT_PLUGIN_DIR/joao" | awk '{print $2}')"
+export VERSION="$($VAULT_PLUGIN_DIR/joao --version)"
+
+# register
+vault plugin register -sha256="$PLUGIN_SHA" -command=joao -args="vault,server" -version="$VERSION" secret joao
+
+# configure, add `vault` to set a default vault for querying
+vault write config/1password "host=$OP_CONNECT_HOST" "token=$OP_CONNECT_TOKEN" # vault=my-default-vault
+
+if !vault plugin list secret | grep -c -m1 '^joao ' >/dev/null; then
+  # first time, let's enable the secrets backend
+  vault secrets enable --path=config joao
+else
+  # updating from a previous version
+  vault secrets tune -plugin-version="$VERSION" config/
+  vault plugin reload -plugin joao
+fi
+```
+
+### Vault API
+
+```sh
+# VAULT is optional if configured with a default `vault`. See above
+
+# vault read config/tree/[VAULT/]ITEM
+vault read config/tree/service:api
+vault read config/tree/prod/service:api
+
+# vault list config/trees/[VAULT/]
+vault list config/trees
+vault list config/trees/prod
+```
+
+See:
+  - https://developer.hashicorp.com/vault/docs/plugins

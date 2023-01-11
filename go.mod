@@ -5,7 +5,7 @@ go 1.18
 // replace git.rob.mx/nidito/chinampa => /Users/roberto/src/chinampa
 
 require (
-	git.rob.mx/nidito/chinampa v0.0.0-20230102065449-d9b257e145ce
+	git.rob.mx/nidito/chinampa v0.0.0-20230111054043-db21a53b2d20
 	github.com/1Password/connect-sdk-go v1.5.0
 	github.com/alessio/shellescape v1.4.1
 	github.com/hashicorp/go-hclog v1.4.0
@@ -86,8 +86,8 @@ require (
 	golang.org/x/term v0.4.0 // indirect
 	golang.org/x/text v0.6.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
-	google.golang.org/genproto v0.0.0-20230109162033-3c3c17ce83e6 // indirect
-	google.golang.org/grpc v1.51.0 // indirect
+	google.golang.org/genproto v0.0.0-20230110181048-76db0878b65f // indirect
+	google.golang.org/grpc v1.52.0 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
 )

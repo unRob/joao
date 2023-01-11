@@ -12,7 +12,7 @@ import (
 var Plugin = &command.Command{
 	Path:    []string{"vault", "server"},
 	Summary: "Starts a vault-joao-plugin server",
-	Description: `Runs ﹅joao﹅ as a vault plugin. See https://developer.hashicorp.com/vault/docs/plugins
+	Description: `Runs ﹅joao﹅ as a vault plugin.
 
 You'll need to install ﹅joao﹅ in the machine running ﹅vault﹅ to ﹅plugin_directory﹅ as specified by vault's config. The installed ﹅joao﹅ executable needs to be executable for the user running vault only.
 
@@ -52,6 +52,9 @@ vault read config/tree/prod/service:api
 vault list config/trees
 vault list config/trees/prod
 ﹅﹅﹅
+
+See:
+  - https://developer.hashicorp.com/vault/docs/plugins
 `,
 	Options: command.Options{
 		"ca-cert": {

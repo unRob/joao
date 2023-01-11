@@ -24,7 +24,7 @@ func Load(ref string, preferRemote bool) (*Config, error) {
 
 		if argIsYAMLFile(ref) {
 			var err error
-			name, vault, err = vaultAndNameFrom(ref, nil)
+			name, vault, err = VaultAndNameFrom(ref, nil)
 			if err != nil {
 				return nil, err
 			}
@@ -66,7 +66,7 @@ func FromFile(path string) (*Config, error) {
 		buf = []byte("{}")
 	}
 
-	name, vault, err := vaultAndNameFrom(path, buf)
+	name, vault, err := VaultAndNameFrom(path, buf)
 	if err != nil {
 		return nil, err
 	}

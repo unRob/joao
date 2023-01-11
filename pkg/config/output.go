@@ -84,7 +84,7 @@ func (cfg *Config) ToOP() *op.Item {
 			continue
 		}
 
-		if value.Kind == yaml.MappingNode {
+		if value.Kind == yaml.MappingNode || value.Kind == yaml.SequenceNode {
 			sections = append(sections, &op.ItemSection{
 				ID:    value.Name(),
 				Label: value.Name(),

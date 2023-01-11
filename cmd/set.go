@@ -5,6 +5,7 @@ package cmd
 import (
 	"fmt"
 	"io/fs"
+	"io/ioutil"
 	"os"
 	"strings"
 
@@ -89,7 +90,7 @@ Will read values from stdin (or ﹅--from﹅ a file) and store it at the ﹅PATH
 		}
 
 		if delete && input != "/dev/stdin" {
-			logrus.Warn("Ignoring --file while deleting")
+			logrus.Warn("Ignoring --input while deleting")
 		}
 
 		cfg, err = config.Load(path, false)
@@ -104,7 +105,12 @@ Will read values from stdin (or ﹅--from﹅ a file) and store it at the ﹅PATH
 				return err
 			}
 		} else {
-			valueBytes, err := os.ReadFile(input)
+			var valueBytes []byte
+			if input == "/dev/stdin" {
+				valueBytes, err = ioutil.ReadAll(cmd.Cobra.InOrStdin())
+			} else {
+				valueBytes, err = os.ReadFile(input)
+			}
 			if err != nil {
 				return err
 			}

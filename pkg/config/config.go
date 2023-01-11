@@ -89,6 +89,12 @@ func (cfg *Config) Set(path []string, data []byte, isSecret, parseEntry bool) er
 		if err := yaml.Unmarshal(data, newEntry); err != nil {
 			return err
 		}
+		if newEntry.Kind == yaml.MappingNode || newEntry.Kind == yaml.SequenceNode {
+			newEntry.Style = yaml.FoldedStyle | yaml.LiteralStyle
+			for _, v := range newEntry.Content {
+				v.Style = yaml.FlowStyle
+			}
+		}
 	} else {
 		valueStr = strings.Trim(valueStr, "\n")
 		if isSecret {
@@ -108,12 +114,14 @@ func (cfg *Config) Set(path []string, data []byte, isSecret, parseEntry bool) er
 	entry := cfg.Tree
 	for idx, key := range path {
 		if len(path)-1 == idx {
-			dst := entry.ChildNamed(key)
-			if dst == nil {
+			if dst := entry.ChildNamed(key); dst == nil {
+				key := NewEntry(key, yaml.ScalarNode)
 				if entry.Kind == yaml.MappingNode {
-					key := NewEntry(key, yaml.ScalarNode)
+					logrus.Infof("setting new map key %v", newEntry.Path)
 					entry.Content = append(entry.Content, key, newEntry)
 				} else {
+					logrus.Infof("setting new list key %v", newEntry.Path)
+					entry.Kind = yaml.SequenceNode
 					entry.Content = append(entry.Content, newEntry)
 				}
 			} else {
@@ -131,12 +139,15 @@ func (cfg *Config) Set(path []string, data []byte, isSecret, parseEntry bool) er
 		}
 
 		kind := yaml.MappingNode
-		if isNumeric(key) {
+		if idx+1 == len(path)-1 && isNumeric(path[idx+1]) {
 			kind = yaml.SequenceNode
 		}
 		sub := NewEntry(key, kind)
 		sub.Path = append(entry.Path, key) // nolint: gocritic
-		entry.Content = append(entry.Content, sub)
+
+		keyEntry := NewEntry(sub.Name(), yaml.ScalarNode)
+		keyEntry.Value = key
+		entry.Content = append(entry.Content, keyEntry, sub)
 		entry = sub
 	}
 

@@ -1,0 +1,5 @@
+_config: !!joao
+  name: some:test
+  vault: bad-example
+                  int: -:a\
+

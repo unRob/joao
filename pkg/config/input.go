@@ -48,7 +48,11 @@ func Load(ref string, preferRemote bool) (*Config, error) {
 		return nil, fmt.Errorf("could not load %s from local as it's not a path", ref)
 	}
 
-	return FromFile(ref)
+	cfg, err := FromFile(ref)
+	if err != nil {
+		return nil, fmt.Errorf("could not load file %s: %w", ref, err)
+	}
+	return cfg, nil
 }
 
 // FromFile reads a path and returns a config.
@@ -86,7 +90,7 @@ func FromYAML(data []byte) (*Config, error) {
 
 	err := yaml.Unmarshal(data, &cfg.Tree)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not parse %w", err)
 	}
 
 	return cfg, nil

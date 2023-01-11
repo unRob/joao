@@ -206,11 +206,20 @@ func (e *Entry) MarshalYAML() (*yaml.Node, error) {
 		}
 	} else {
 		entries := e.Contents()
+		if len(entries)%2 != 0 {
+			return nil, fmt.Errorf("cannot decode odd numbered contents list: %s", e.Path)
+		}
+
 		for i := 0; i < len(entries); i += 2 {
 			key := entries[i]
 			value := entries[i+1]
 			if yamlOutput.Has(OutputModeNoConfig) && value.Type == YAMLTypeMetaConfig {
 				continue
+			}
+
+			if key.Type == "" {
+				key.Kind = yaml.ScalarNode
+				key.Type = "!!map"
 			}
 
 			keyNode, err := key.MarshalYAML()
@@ -288,11 +297,11 @@ func (e *Entry) FromOP(fields []*op.ItemField) error {
 					Type:  kind,
 				}
 				if isNumeric(key) {
-					// logrus.Debugf("hydrating sequence value at %s", path)
+					logrus.Debugf("hydrating sequence value at %s", path)
 					container.Kind = yaml.SequenceNode
 					container.Content = append(container.Content, newEntry)
 				} else {
-					// logrus.Debugf("hydrating map value at %s", path)
+					logrus.Debugf("hydrating map value at %s", path)
 					keyEntry := NewEntry(key, yaml.ScalarNode)
 					keyEntry.Value = key
 					container.Content = append(container.Content, keyEntry, newEntry)
@@ -303,25 +312,21 @@ func (e *Entry) FromOP(fields []*op.ItemField) error {
 			subContainer := container.ChildNamed(key)
 			if subContainer != nil {
 				container = subContainer
-			} else {
-				kind := yaml.MappingNode
-				if idx+1 < len(path)-1 && isNumeric(path[idx+1]) {
-					// logrus.Debugf("creating sequence container for key %s at %s", key, path)
-					kind = yaml.SequenceNode
-				}
-				child := NewEntry(key, kind)
-				child.Path = append(container.Path, key) // nolint: gocritic
-
-				if kind == yaml.SequenceNode {
-					container.Content = append(container.Content, child)
-				} else {
-					// logrus.Debugf("creating mapping container for %s at %s", key, container.Path)
-					keyEntry := NewEntry(child.Name(), yaml.ScalarNode)
-					keyEntry.Value = key
-					container.Content = append(container.Content, keyEntry, child)
-				}
-				container = child
+				continue
 			}
+
+			kind := yaml.MappingNode
+			if idx+1 == len(path)-1 && isNumeric(path[idx+1]) {
+				logrus.Debugf("creating sequence container for key %s at %s", key, path)
+				kind = yaml.SequenceNode
+			}
+			child := NewEntry(key, kind)
+			child.Path = append(container.Path, key) // nolint: gocritic
+
+			keyEntry := NewEntry(child.Name(), yaml.ScalarNode)
+			keyEntry.Value = key
+			container.Content = append(container.Content, keyEntry, child)
+			container = child
 		}
 	}
 
@@ -332,7 +337,7 @@ func (e *Entry) ToOP() []*op.ItemField {
 	ret := []*op.ItemField{}
 	var section *op.ItemSection
 
-	if e.Kind == yaml.ScalarNode {
+	if e.IsScalar() {
 		name := e.Path[len(e.Path)-1]
 		fullPath := strings.Join(e.Path, ".")
 		if len(e.Path) > 1 {
@@ -466,10 +471,8 @@ func (e *Entry) Merge(other *Entry) error {
 			if err := local.Merge(remote); err != nil {
 				return err
 			}
-		} else {
-			logrus.Debugf("adding new collection value at %s", remote.Path)
-			local.Content = append(local.Content, remote)
 		}
+		local.Content = append(local.Content, remote)
 	}
 
 	return nil

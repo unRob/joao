@@ -77,6 +77,7 @@ looks at the filesystem or remotely, using 1password (over the CLI if available,
 		}
 
 		if query == "" || query == "." {
+			var bytes []byte
 			switch format {
 			case "yaml", "raw", "diff-yaml":
 				modes := []config.OutputMode{}
@@ -86,21 +87,17 @@ looks at the filesystem or remotely, using 1password (over the CLI if available,
 				if format == "diff-yaml" {
 					modes = append(modes, config.OutputModeNoComments, config.OutputModeSorted)
 				}
-				bytes, err := cfg.AsYAML(modes...)
-				if err != nil {
-					return err
-				}
-				_, err = cmd.Cobra.OutOrStdout().Write(bytes)
-				return err
+				bytes, err = cfg.AsYAML(modes...)
 			case "json", "op":
-				bytes, err := cfg.AsJSON(redacted, format == "op")
-				if err != nil {
-					return err
-				}
-				_, err = cmd.Cobra.OutOrStdout().Write(bytes)
+				bytes, err = cfg.AsJSON(redacted, format == "op")
+			default:
+				return fmt.Errorf("unknown format %s", format)
+			}
+			if err != nil {
 				return err
 			}
-			return fmt.Errorf("unknown format %s", format)
+			_, err = cmd.Cobra.OutOrStdout().Write(bytes)
+			return err
 		}
 
 		parts := strings.Split(query, ".")

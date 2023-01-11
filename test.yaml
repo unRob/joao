@@ -4,7 +4,7 @@ _config: !!joao
 # not sorted on purpose
 int: 1 # line
 # foot
-string: "pato"
+string: pato
 bool: false
 secret: !!secret very secret
 nested:
@@ -12,6 +12,10 @@ nested:
   int: 1
   secret: !!secret very secret
   bool: true
+  list:
+    - 1
+    - 2
+    - 3
 list:
   - one
   - two

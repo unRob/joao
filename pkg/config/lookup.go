@@ -15,22 +15,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func (cfg *Config) Lookup(query []string) (*Entry, error) {
-	if len(query) == 0 || len(query) == 1 && query[0] == "." {
-		return cfg.Tree, nil
-	}
-
-	entry := cfg.Tree
-	for _, part := range query {
-		entry = entry.ChildNamed(part)
-		if entry == nil {
-			return nil, fmt.Errorf("value not found at %s of %s", part, query)
-		}
-	}
-
-	return entry, nil
-}
-
 func findRepoConfig(from string) (*opDetails, error) {
 	parts := strings.Split(from, "/")
 	for i := len(parts); i > 0; i-- {
@@ -107,7 +91,7 @@ func AutocompleteKeys(cmd *command.Command, currentValue, config string) ([]stri
 
 	keys, err := KeysFromYAML(buf)
 	if err != nil {
-		return nil, flag, err
+		return nil, flag, fmt.Errorf("could not parse file %s as %w", file, err)
 	}
 
 	sort.Strings(keys)

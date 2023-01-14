@@ -70,7 +70,7 @@ git config filter.joao.smudge cat
 # let's enforce these filters
 git config filter.joao.required true
 
-# optionally, configure a diff filter to show changes as would be commited to git
+# optionally, configure a diff filter to show changes as would be committed to git
 # this does not modify the original file on disk
 git config diff.joao.textconv "joao git-filter diff"
 ﹅﹅﹅

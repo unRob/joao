@@ -66,7 +66,7 @@ func Backend() *backend {
 	}
 
 	b.Backend = &framework.Backend{
-		BackendType: logical.TypeCredential,
+		BackendType: logical.TypeLogical,
 		Help:        "joao reads configuration entries from 1Password Connect",
 		PathsSpecial: &logical.Paths{
 			SealWrapStorage: []string{

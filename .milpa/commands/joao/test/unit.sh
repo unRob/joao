@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # Copyright © 2021 Roberto Hidalgo <joao@un.rob.mx>
 
-cd "$MILPA_REPO_ROOT" || @milpa.fail "could not cd into $MILPA_REPO_ROOT"
+cd "$(dirname "$MILPA_COMMAND_REPO")" || @milpa.fail "could not cd into $MILPA_REPO_ROOT"
 @milpa.log info "Running unit tests"
 args=()
 after_run=complete

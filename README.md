@@ -29,7 +29,7 @@ joao diff [--cache] PATH
 joao git-filter
 
 # show information on the vault integration
-joao vault server --help
+joao vault-plugin --help
 ```
 
 ## Why

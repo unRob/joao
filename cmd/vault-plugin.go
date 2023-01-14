@@ -3,6 +3,8 @@
 package cmd
 
 import (
+	"os"
+
 	"git.rob.mx/nidito/chinampa/pkg/command"
 	"git.rob.mx/nidito/joao/internal/vault"
 	"github.com/hashicorp/vault/api"
@@ -10,11 +12,11 @@ import (
 )
 
 var Plugin = &command.Command{
-	Path:    []string{"vault", "server"},
+	Path:    []string{"vault-plugin"},
 	Summary: "Starts a vault-joao-plugin server",
-	Description: `Runs ﹅joao﹅ as a vault plugin.
+	Description: `﹅joao﹅ can run as a plugin to Hashicorp Vault, and make whole configuration entries available—secrets and all—through the Vault API.
 
-You'll need to install ﹅joao﹅ in the machine running ﹅vault﹅ to ﹅plugin_directory﹅ as specified by vault's config. The installed ﹅joao﹅ executable needs to be executable for the user running vault only.
+To install, download ﹅joao﹅ to the machine running ﹅vault﹅ at the ﹅plugin_directory﹅, as specified by vault's config. The installed ﹅joao﹅ executable needs to be executable for the user running vault only.
 
 ### Configuration
 ﹅﹅﹅sh
@@ -24,14 +26,14 @@ export PLUGIN_SHA="$(openssl dgst -sha256 -hex "$VAULT_PLUGIN_DIR/joao" | awk '{
 export VERSION="$($VAULT_PLUGIN_DIR/joao --version)"
 
 # register
-vault plugin register -sha256="$PLUGIN_SHA" -command=joao -args="vault,server" -version="$VERSION" secret joao
+vault plugin register -sha256="$PLUGIN_SHA" -command=joao -args="vault-plugin" -version="$VERSION" secret joao
 
 # configure, add ﹅vault﹅ to set a default vault for querying
 vault write config/1password "host=$OP_CONNECT_HOST" "token=$OP_CONNECT_TOKEN" # vault=my-default-vault
 
-if !vault plugin list secret | grep -c -m1 '^joao ' >/dev/null; then
+if !(vault plugin list secret | grep -c -m1 '^joao ' >/dev/null); then
   # first time, let's enable the secrets backend
-  vault secrets enable --path=config joao
+  vault secrets enable -path=config joao
 else
   # updating from a previous version
   vault secrets tune -plugin-version="$VERSION" config/
@@ -57,39 +59,25 @@ See:
   - https://developer.hashicorp.com/vault/docs/plugins
 `,
 	Options: command.Options{
-		"ca-cert": {
-			Type:        command.ValueTypeString,
-			Description: "See https://pkg.go.dev/github.com/hashicorp/vault/api#TLSConfig",
+		"sigh0": {
+			ShortName: "c",
+			Default:   "",
 		},
-		"ca-path": {
-			Type:        command.ValueTypeString,
-			Description: "See https://pkg.go.dev/github.com/hashicorp/vault/api#TLSConfig",
-		},
-		"client-cert": {
-			Type:        command.ValueTypeString,
-			Description: "See https://pkg.go.dev/github.com/hashicorp/vault/api#TLSConfig",
-		},
-		"client-key": {
-			Type:        command.ValueTypeString,
-			Description: "See https://pkg.go.dev/github.com/hashicorp/vault/api#TLSConfig",
-		},
-		"tls-skip-verify": {
-			Type:        command.ValueTypeBoolean,
-			Description: "See https://pkg.go.dev/github.com/hashicorp/vault/api#TLSConfig",
-			Default:     false,
+		"sigh1": {
+			ShortName: "t",
+			Default:   "",
 		},
 	},
 	Action: func(cmd *command.Command) error {
+		apiClientMeta := &api.PluginAPIClientMeta{}
+		flags := apiClientMeta.FlagSet()
+		flags.Parse(os.Args[2:])
+
+		tlsConfig := apiClientMeta.GetTLSConfig()
+		tlsProviderFunc := api.VaultPluginTLSProvider(tlsConfig)
 		return plugin.ServeMultiplex(&plugin.ServeOpts{
 			BackendFactoryFunc: vault.Factory,
-			TLSProviderFunc: api.VaultPluginTLSProvider(&api.TLSConfig{
-				CACert:        cmd.Options["ca-cert"].ToString(),
-				CAPath:        cmd.Options["ca-path"].ToString(),
-				ClientCert:    cmd.Options["client-cert"].ToString(),
-				ClientKey:     cmd.Options["client-key"].ToString(),
-				TLSServerName: "",
-				Insecure:      cmd.Options["tls-skip-verify"].ToValue().(bool),
-			}),
+			TLSProviderFunc:    tlsProviderFunc,
 		})
 	},
 }

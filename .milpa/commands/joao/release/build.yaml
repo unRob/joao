@@ -1,0 +1,10 @@
+summary: Packages and joao for release
+description: |
+  Creates a folder, by default `dist` with `joao-$os-$arch.tgz`, the packaged joao executable, for all supported platforms.
+arguments:
+  - name: version
+    description: The semver number to build
+    required: true
+    values:
+      script: git tag -l
+      suggest-only: true

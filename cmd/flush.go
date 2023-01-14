@@ -22,13 +22,17 @@ var Flush = &command.Command{
 			Required:    false,
 			Variadic:    true,
 			Values: &command.ValueSource{
-				Files: &[]string{"yaml"},
+				Files: &fileExtensions,
 			},
 		},
 	},
 	Options: command.Options{
 		"dry-run": {
 			Description: "Don't persist to 1Password",
+			Type:        "bool",
+		},
+		"redact": {
+			Description: "Redact local file after flushing",
 			Type:        "bool",
 		},
 	},
@@ -47,6 +51,12 @@ var Flush = &command.Command{
 
 			if err := opclient.Update(cfg.Vault, cfg.Name, cfg.ToOP()); err != nil {
 				return fmt.Errorf("could not flush to 1password: %w", err)
+			}
+
+			if cmd.Options["redact"].ToValue().(bool) {
+				if err := cfg.AsFile(path); err != nil {
+					return err
+				}
 			}
 		}
 

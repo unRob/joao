@@ -5,7 +5,7 @@ go 1.18
 // replace git.rob.mx/nidito/chinampa => /Users/roberto/src/chinampa
 
 require (
-	git.rob.mx/nidito/chinampa v0.0.0-20230111054043-db21a53b2d20
+	git.rob.mx/nidito/chinampa v0.0.0-20230114231059-a14ffd07b963
 	github.com/1Password/connect-sdk-go v1.5.0
 	github.com/alessio/shellescape v1.4.1
 	github.com/hashicorp/go-hclog v1.4.0
@@ -26,7 +26,7 @@ require (
 	github.com/aymerick/douceur v0.2.0 // indirect
 	github.com/cenkalti/backoff/v3 v3.2.2 // indirect
 	github.com/charmbracelet/glamour v0.6.0 // indirect
-	github.com/dlclark/regexp2 v1.7.0 // indirect
+	github.com/dlclark/regexp2 v1.8.0 // indirect
 	github.com/evanphx/json-patch/v5 v5.6.0 // indirect
 	github.com/fatih/color v1.13.0 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect

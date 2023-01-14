@@ -30,6 +30,7 @@ func main() {
 		cmd.Diff,
 		cmd.Fetch,
 		cmd.Flush,
+		cmd.Redact,
 		cmd.Plugin,
 	)
 	chinampa.Register(cmd.GitFilters...)

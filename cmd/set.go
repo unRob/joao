@@ -4,7 +4,6 @@ package cmd
 
 import (
 	"fmt"
-	"io/fs"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -29,7 +28,7 @@ Will read values from stdin (or ﹅--from﹅ a file) and store it at the ﹅PATH
 			Description: "The configuration file to modify",
 			Required:    true,
 			Values: &command.ValueSource{
-				Files: &[]string{"yaml"},
+				Files: &fileExtensions,
 			},
 		},
 		{
@@ -119,18 +118,8 @@ Will read values from stdin (or ﹅--from﹅ a file) and store it at the ﹅PATH
 			}
 		}
 
-		b, err := cfg.AsYAML()
-		if err != nil {
+		if err := cfg.AsFile(path); err != nil {
 			return err
-		}
-
-		var mode fs.FileMode = 0644
-		if info, err := os.Stat(path); err == nil {
-			mode = info.Mode().Perm()
-		}
-
-		if err := os.WriteFile(path, b, mode); err != nil {
-			return fmt.Errorf("could not save changes to %s: %w", path, err)
 		}
 
 		if flush {

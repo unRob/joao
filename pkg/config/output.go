@@ -6,6 +6,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/fs"
+	"os"
 
 	op "github.com/1Password/connect-sdk-go/onepassword"
 	"github.com/sirupsen/logrus"
@@ -139,4 +141,22 @@ func (cfg *Config) AsJSON(redacted bool, item bool) ([]byte, error) {
 		return nil, fmt.Errorf("could not serialize config as json: %w", err)
 	}
 	return bytes, nil
+}
+
+func (cfg *Config) AsFile(path string) error {
+	b, err := cfg.AsYAML()
+	if err != nil {
+		return err
+	}
+
+	var mode fs.FileMode = 0644
+	if info, err := os.Stat(path); err == nil {
+		mode = info.Mode().Perm()
+	}
+
+	if err := os.WriteFile(path, b, mode); err != nil {
+		return fmt.Errorf("could not save config to file %s: %w", path, err)
+	}
+
+	return nil
 }

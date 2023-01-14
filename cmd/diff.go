@@ -19,7 +19,7 @@ var Diff = &command.Command{
 			Required:    false,
 			Variadic:    true,
 			Values: &command.ValueSource{
-				Files: &[]string{"joao.yaml"},
+				Files: &fileExtensions,
 			},
 		},
 	},

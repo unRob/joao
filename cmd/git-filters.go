@@ -111,7 +111,7 @@ var FilterDiff = &command.Command{
 			Description: "The git staged path to read from",
 			Required:    true,
 			Values: &command.ValueSource{
-				Files: &[]string{"yaml", "yml"},
+				Files: &fileExtensions,
 			},
 		},
 	},
@@ -131,7 +131,7 @@ Use ﹅--flush﹅ to save changes to 1password before redacting file.`,
 			Description: "The git staged path to read from",
 			Required:    true,
 			Values: &command.ValueSource{
-				Files: &[]string{"yaml", "yml"},
+				Files: &fileExtensions,
 			},
 		},
 	},

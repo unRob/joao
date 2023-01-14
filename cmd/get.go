@@ -31,7 +31,7 @@ looks at the filesystem or remotely, using 1password (over the CLI if available,
 			Description: "The configuration to get from",
 			Required:    true,
 			Values: &command.ValueSource{
-				Files: &[]string{"yaml", "yml"},
+				Files: &fileExtensions,
 			},
 		},
 		{

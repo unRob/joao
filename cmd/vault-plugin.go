@@ -9,6 +9,7 @@ import (
 	"git.rob.mx/nidito/joao/internal/vault"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/plugin"
+	"github.com/sirupsen/logrus"
 )
 
 var Plugin = &command.Command{
@@ -71,7 +72,10 @@ See:
 	Action: func(cmd *command.Command) error {
 		apiClientMeta := &api.PluginAPIClientMeta{}
 		flags := apiClientMeta.FlagSet()
-		flags.Parse(os.Args[2:])
+		err := flags.Parse(os.Args[2:])
+		if err != nil {
+			logrus.Warnf("Could not parse flags: %s", err)
+		}
 
 		tlsConfig := apiClientMeta.GetTLSConfig()
 		tlsProviderFunc := api.VaultPluginTLSProvider(tlsConfig)

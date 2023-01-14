@@ -3,10 +3,6 @@
 package cmd
 
 import (
-	"fmt"
-	"io/fs"
-	"os"
-
 	"git.rob.mx/nidito/chinampa/pkg/command"
 	"git.rob.mx/nidito/joao/pkg/config"
 	"github.com/sirupsen/logrus"
@@ -23,7 +19,7 @@ var Fetch = &command.Command{
 			Required:    false,
 			Variadic:    true,
 			Values: &command.ValueSource{
-				Files: &[]string{"joao.yaml"},
+				Files: &fileExtensions,
 			},
 		},
 	},
@@ -49,22 +45,16 @@ var Fetch = &command.Command{
 				return err
 			}
 
-			b, err := local.AsYAML()
-			if err != nil {
-				return err
-			}
-
 			if dryRun := cmd.Options["dry-run"].ToValue().(bool); dryRun {
+				b, err := local.AsYAML()
+				if err != nil {
+					return err
+				}
 				logrus.Warnf("dry-run: would write to %s", path)
 				_, _ = cmd.Cobra.OutOrStdout().Write(b)
 			} else {
-				var mode fs.FileMode = 0644
-				if info, err := os.Stat(path); err == nil {
-					mode = info.Mode().Perm()
-				}
-
-				if err := os.WriteFile(path, b, mode); err != nil {
-					return fmt.Errorf("could not save changes to %s: %w", path, err)
+				if err := local.AsFile(path); err != nil {
+					return err
 				}
 			}
 

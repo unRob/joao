@@ -34,9 +34,15 @@ var Diff = &command.Command{
 				},
 			},
 		},
+		"redacted": {
+			Description: "Compare redacted versions",
+			Type:        "bool",
+			Default:     false,
+		},
 	},
 	Action: func(cmd *command.Command) error {
 		paths := cmd.Arguments[0].ToValue().([]string)
+		redacted := cmd.Options["redacted"].ToValue().(bool)
 		for _, path := range paths {
 
 			local, err := config.Load(path, false)
@@ -44,7 +50,7 @@ var Diff = &command.Command{
 				return err
 			}
 
-			if err := local.DiffRemote(path, cmd.Cobra.OutOrStdout(), cmd.Cobra.OutOrStderr()); err != nil {
+			if err := local.DiffRemote(path, redacted, cmd.Cobra.OutOrStdout(), cmd.Cobra.OutOrStderr()); err != nil {
 				return err
 			}
 		}

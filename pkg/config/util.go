@@ -97,7 +97,6 @@ func checksum(fields []*op.ItemField) string {
 	sort.Strings(df)
 	newHash.Write([]byte(strings.Join(df, "")))
 	checksum := newHash.Sum(nil)
-
 	return fmt.Sprintf("%x", checksum)
 }
 

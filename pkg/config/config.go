@@ -156,13 +156,19 @@ func (cfg *Config) Merge(other *Config) error {
 	return cfg.Tree.Merge(other.Tree)
 }
 
-func (cfg *Config) DiffRemote(path string, stdout io.Writer, stderr io.Writer) error {
+func (cfg *Config) DiffRemote(path string, redacted bool, stdout, stderr io.Writer) error {
+	logrus.Debugf("loading remote for %s", path)
 	remote, err := Load(path, true)
 	if err != nil {
 		return err
 	}
 
-	localBytes, err := cfg.AsYAML(OutputModeNoComments, OutputModeSorted, OutputModeNoConfig, OutputModeStandardYAML)
+	modes := []OutputMode{OutputModeNoComments, OutputModeSorted, OutputModeNoConfig, OutputModeStandardYAML}
+	if redacted {
+		modes = append(modes, OutputModeRedacted)
+	}
+
+	localBytes, err := cfg.AsYAML(modes...)
 	if err != nil {
 		return err
 	}
@@ -173,7 +179,7 @@ func (cfg *Config) DiffRemote(path string, stdout io.Writer, stderr io.Writer) e
 	}
 	defer cleanupLocalDiff()
 
-	remoteBytes, err := remote.AsYAML(OutputModeNoComments, OutputModeSorted, OutputModeStandardYAML)
+	remoteBytes, err := remote.AsYAML(modes...)
 	if err != nil {
 		return err
 	}

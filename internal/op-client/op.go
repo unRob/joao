@@ -42,7 +42,7 @@ func Update(vault, name string, item *op.Item) error {
 	}
 
 	if remote.GetValue("password") == item.GetValue("password") {
-		logrus.Warn("item is already up to date")
+		logrus.Warnf("item %s/%s is already up to date", item.Vault.ID, item.Title)
 		return nil
 	}
 

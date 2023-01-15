@@ -14,7 +14,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const warnChecksumMismatch = `1Password item changed and checksum was not updated.
+const warnChecksumMismatch = `1Password item %s changed and checksum was not updated.
 Expected: %s
 found   : %s`
 
@@ -111,7 +111,7 @@ func FromOP(item *op.Item) (*Config, error) {
 	}
 
 	if cs := checksum(item.Fields); cs != item.GetValue("password") {
-		logrus.Warnf(warnChecksumMismatch, cs, item.GetValue("password"))
+		logrus.Warnf(warnChecksumMismatch, fmt.Sprintf("%s/%s", item.Vault.ID, item.Title), cs, item.GetValue("password"))
 	}
 	err := cfg.Tree.FromOP(item.Fields)
 	return cfg, err

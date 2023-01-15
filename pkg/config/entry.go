@@ -195,6 +195,23 @@ func (e *Entry) asNode() *yaml.Node {
 		n.FootComment = e.FootComment
 	}
 
+	if yamlOutput.Has(OutputModeStandardYAML) {
+		if e.IsScalar() {
+			if len(e.Path) >= 0 {
+				if !strings.Contains(n.Value, "\n") {
+					n.Style &= yaml.FoldedStyle
+				} else {
+					n.Style &= yaml.FlowStyle
+				}
+			}
+		} else {
+			n.Style = yaml.FoldedStyle | yaml.LiteralStyle
+			for _, v := range n.Content {
+				v.Style = yaml.FlowStyle
+			}
+		}
+	}
+
 	return n
 }
 
@@ -209,7 +226,7 @@ func (e *Entry) MarshalYAML() (*yaml.Node, error) {
 			}
 			n.Content = append(n.Content, node)
 		}
-	} else {
+	} else if e.Kind == yaml.MappingNode || e.Kind == yaml.DocumentNode {
 		entries := e.Contents()
 		if len(entries)%2 != 0 {
 			return nil, fmt.Errorf("cannot decode odd numbered contents list: %s", e.Path)

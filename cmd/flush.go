@@ -54,7 +54,7 @@ var Flush = &command.Command{
 			}
 
 			if cmd.Options["redact"].ToValue().(bool) {
-				if err := cfg.AsFile(path); err != nil {
+				if err := cfg.AsFile(path, config.OutputModeRedacted); err != nil {
 					return err
 				}
 			}

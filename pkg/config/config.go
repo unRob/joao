@@ -162,7 +162,7 @@ func (cfg *Config) DiffRemote(path string, stdout io.Writer, stderr io.Writer) e
 		return err
 	}
 
-	localBytes, err := cfg.AsYAML(OutputModeNoComments, OutputModeSorted, OutputModeNoConfig)
+	localBytes, err := cfg.AsYAML(OutputModeNoComments, OutputModeSorted, OutputModeNoConfig, OutputModeStandardYAML)
 	if err != nil {
 		return err
 	}
@@ -173,7 +173,7 @@ func (cfg *Config) DiffRemote(path string, stdout io.Writer, stderr io.Writer) e
 	}
 	defer cleanupLocalDiff()
 
-	remoteBytes, err := remote.AsYAML(OutputModeNoComments, OutputModeSorted)
+	remoteBytes, err := remote.AsYAML(OutputModeNoComments, OutputModeSorted, OutputModeStandardYAML)
 	if err != nil {
 		return err
 	}

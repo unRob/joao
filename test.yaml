@@ -8,14 +8,15 @@ string: pato
 bool: false
 secret: !!secret very secret
 nested:
-  string: quem
   int: 1
-  secret: !!secret very secret
   bool: true
   list:
     - 1
     - 2
     - 3
+  secret: !!secret very secret
+  second_secret: !!secret very secret
+  string: quem
 list:
   - one
   - two

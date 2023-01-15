@@ -117,15 +117,12 @@ func (cfg *Config) Set(path []string, data []byte, isSecret, parseEntry bool) er
 			if dst := entry.ChildNamed(key); dst == nil {
 				key := NewEntry(key, yaml.ScalarNode)
 				if entry.Kind == yaml.MappingNode {
-					logrus.Infof("setting new map key %v", newEntry.Path)
 					entry.Content = append(entry.Content, key, newEntry)
 				} else {
-					logrus.Infof("setting new list key %v", newEntry.Path)
 					entry.Kind = yaml.SequenceNode
 					entry.Content = append(entry.Content, newEntry)
 				}
 			} else {
-				logrus.Infof("setting %v", newEntry.Path)
 				dst.Value = newEntry.Value
 				dst.Tag = newEntry.Tag
 				dst.Style = newEntry.Style
@@ -143,7 +140,8 @@ func (cfg *Config) Set(path []string, data []byte, isSecret, parseEntry bool) er
 			kind = yaml.SequenceNode
 		}
 		sub := NewEntry(key, kind)
-		sub.Path = append(entry.Path, key) // nolint: gocritic
+		sub.Path = append([]string{}, entry.Path...)
+		sub.Path = append(sub.Path, key)
 
 		keyEntry := NewEntry(sub.Name(), yaml.ScalarNode)
 		keyEntry.Value = key

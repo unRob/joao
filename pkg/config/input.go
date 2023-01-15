@@ -5,6 +5,7 @@ package config
 import (
 	"fmt"
 	"io/ioutil"
+	"path/filepath"
 	"strings"
 
 	opClient "git.rob.mx/nidito/joao/internal/op-client"
@@ -48,9 +49,13 @@ func Load(ref string, preferRemote bool) (*Config, error) {
 		return nil, fmt.Errorf("could not load %s from local as it's not a path", ref)
 	}
 
-	cfg, err := FromFile(ref)
+	path, err := filepath.Abs(ref)
 	if err != nil {
-		return nil, fmt.Errorf("could not load file %s: %w", ref, err)
+		return nil, fmt.Errorf("could not find asbolute path to file %s: %w", ref, err)
+	}
+	cfg, err := FromFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("could not load file %s: %w", path, err)
 	}
 	return cfg, nil
 }
@@ -92,6 +97,7 @@ func FromYAML(data []byte) (*Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not parse %w", err)
 	}
+	cfg.Tree.SetPath([]string{}, ".")
 
 	return cfg, nil
 }

@@ -143,8 +143,8 @@ func (cfg *Config) AsJSON(redacted bool, item bool) ([]byte, error) {
 	return bytes, nil
 }
 
-func (cfg *Config) AsFile(path string) error {
-	b, err := cfg.AsYAML()
+func (cfg *Config) AsFile(path string, modes ...OutputMode) error {
+	b, err := cfg.AsYAML(modes...)
 	if err != nil {
 		return err
 	}

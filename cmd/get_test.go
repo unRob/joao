@@ -4,6 +4,7 @@ package cmd_test
 
 import (
 	"bytes"
+	"encoding/json"
 	"os"
 	"path"
 	"runtime"
@@ -25,7 +26,7 @@ var testConfig = &onepassword.Item{
 	Category: "PASSWORD",
 	Sections: []*onepassword.ItemSection{
 		{ID: "~annotations", Label: "~annotations"},
-		// {ID: "nested", Label: "nested"},
+		{ID: "nested", Label: "nested"},
 		{ID: "list", Label: "list"},
 	},
 	Fields: []*onepassword.ItemField{
@@ -34,7 +35,7 @@ var testConfig = &onepassword.Item{
 			Type:    "CONCEALED",
 			Purpose: "PASSWORD",
 			Label:   "password",
-			Value:   "56615e9be5f0ce5f97d5b446faaa1d39f95a13a1ea8326ae933c3d29eb29735c",
+			Value:   "8b23de7705b79b73d9f75b120651bc162859e45a732b764362feaefc882eab5d",
 		},
 		{
 			ID:      "notesPlain",
@@ -89,13 +90,6 @@ var testConfig = &onepassword.Item{
 			Value: "very secret",
 		},
 		{
-			ID:      "nested.string",
-			Section: &onepassword.ItemSection{ID: "nested", Label: "nested"},
-			Type:    "STRING",
-			Label:   "string",
-			Value:   "quem",
-		},
-		{
 			ID:      "~annotations.nested.int",
 			Section: &onepassword.ItemSection{ID: "~annotations", Label: "~annotations"},
 			Type:    "STRING",
@@ -108,6 +102,62 @@ var testConfig = &onepassword.Item{
 			Type:    "STRING",
 			Label:   "int",
 			Value:   "1",
+		},
+		{
+			ID:      "~annotations.nested.bool",
+			Section: &onepassword.ItemSection{ID: "~annotations", Label: "~annotations"},
+			Type:    "STRING",
+			Label:   "nested.bool",
+			Value:   "bool",
+		},
+		{
+			ID:      "nested.bool",
+			Section: &onepassword.ItemSection{ID: "nested", Label: "nested"},
+			Type:    "STRING",
+			Label:   "bool",
+			Value:   "true",
+		},
+		{
+			ID:      "~annotations.nested.list.0",
+			Section: &onepassword.ItemSection{ID: "~annotations", Label: "~annotations"},
+			Type:    "STRING",
+			Label:   "nested.list.0",
+			Value:   "int",
+		},
+		{
+			ID:      "nested.list.0",
+			Section: &onepassword.ItemSection{ID: "nested", Label: "nested"},
+			Type:    "STRING",
+			Label:   "list.0",
+			Value:   "1",
+		},
+		{
+			ID:      "~annotations.nested.list.1",
+			Section: &onepassword.ItemSection{ID: "~annotations", Label: "~annotations"},
+			Type:    "STRING",
+			Label:   "nested.list.1",
+			Value:   "int",
+		},
+		{
+			ID:      "nested.list.1",
+			Section: &onepassword.ItemSection{ID: "nested", Label: "nested"},
+			Type:    "STRING",
+			Label:   "list.1",
+			Value:   "2",
+		},
+		{
+			ID:      "~annotations.nested.list.2",
+			Section: &onepassword.ItemSection{ID: "~annotations", Label: "~annotations"},
+			Type:    "STRING",
+			Label:   "nested.list.2",
+			Value:   "int",
+		},
+		{
+			ID:      "nested.list.2",
+			Section: &onepassword.ItemSection{ID: "nested", Label: "nested"},
+			Type:    "STRING",
+			Label:   "list.2",
+			Value:   "3",
 		},
 		{
 			ID:      "~annotations.nested.secret",
@@ -124,18 +174,25 @@ var testConfig = &onepassword.Item{
 			Value:   "very secret",
 		},
 		{
-			ID:      "~annotations.nested.bool",
+			ID:      "~annotations.nested.second_secret",
 			Section: &onepassword.ItemSection{ID: "~annotations", Label: "~annotations"},
 			Type:    "STRING",
-			Label:   "nested.bool",
-			Value:   "bool",
+			Label:   "nested.second_secret",
+			Value:   "secret",
 		},
 		{
-			ID:      "nested.bool",
+			ID:      "nested.second_secret",
+			Section: &onepassword.ItemSection{ID: "nested", Label: "nested"},
+			Type:    "CONCEALED",
+			Label:   "second_secret",
+			Value:   "very secret",
+		},
+		{
+			ID:      "nested.string",
 			Section: &onepassword.ItemSection{ID: "nested", Label: "nested"},
 			Type:    "STRING",
-			Label:   "bool",
-			Value:   "true",
+			Label:   "string",
+			Value:   "quem",
 		},
 		{
 			ID:      "list.0",
@@ -306,6 +363,7 @@ list:
   - 1
   - 2
   - 3
+second_secret: very secret
 secret: very secret
 string: quem`
 
@@ -336,6 +394,7 @@ list:
   - 1
   - 2
   - 3
+second_secret: very secret
 secret: very secret
 string: quem`
 
@@ -376,6 +435,7 @@ nested:
     - 1
     - 2
     - 3
+  second_secret: !!secret very secret
   secret: !!secret very secret
   string: quem
 secret: !!secret very secret
@@ -402,7 +462,30 @@ func TestGetJSON(t *testing.T) {
 		t.Fatalf("could not get: %s", err)
 	}
 
-	expected := `{"bool":false,"int":1,"list":["one","two","three"],"nested":{"bool":true,"int":1,"list":[1,2,3],"secret":"very secret","string":"quem"},"secret":"very secret","string":"pato"}`
+	expected := `{"bool":false,"int":1,"list":["one","two","three"],"nested":{"bool":true,"int":1,"list":[1,2,3],"second_secret":"very secret","secret":"very secret","string":"quem"},"secret":"very secret","string":"pato"}`
+
+	if got := out.String(); strings.TrimSpace(got) != expected {
+		t.Fatalf("did not get expected output:\nwanted: %s\ngot: %s", expected, got)
+	}
+}
+
+func TestGetDeepJSON(t *testing.T) {
+	root := fromProjectRoot()
+	out := bytes.Buffer{}
+	Get.SetBindings()
+	cmd := &cobra.Command{}
+	cmd.Flags().Bool("redacted", false, "")
+	cmd.Flags().StringP("output", "o", "json", "")
+	cmd.SetOut(&out)
+	cmd.SetErr(&out)
+	Get.Cobra = cmd
+	err := Get.Run(cmd, []string{root + "/deeply-nested.test.yaml", ".", "--output", "json"})
+
+	if err != nil {
+		t.Fatalf("could not get: %s", err)
+	}
+
+	expected := `{"root":{"of":{"deeply":{"nested_list":["10.42.31.42/32"],"nested_map":"asdf"}}}}`
 
 	if got := out.String(); strings.TrimSpace(got) != expected {
 		t.Fatalf("did not get expected output:\nwanted: %s\ngot: %s", expected, got)
@@ -448,7 +531,7 @@ func TestGetJSONPathCollection(t *testing.T) {
 		t.Fatalf("could not get: %s", err)
 	}
 
-	expected := `{"bool":true,"int":1,"list":[1,2,3],"secret":"very secret","string":"quem"}`
+	expected := `{"bool":true,"int":1,"list":[1,2,3],"second_secret":"very secret","secret":"very secret","string":"quem"}`
 
 	if got := out.String(); strings.TrimSpace(got) != expected {
 		t.Fatalf("did not get expected output:\nwanted: %s\ngot: %s", expected, got)
@@ -471,7 +554,7 @@ func TestGetJSONRedacted(t *testing.T) {
 		t.Fatalf("could not get: %s", err)
 	}
 
-	expected := `{"bool":false,"int":1,"list":["one","two","three"],"nested":{"bool":true,"int":1,"list":[1,2,3],"secret":"","string":"quem"},"secret":"","string":"pato"}`
+	expected := `{"bool":false,"int":1,"list":["one","two","three"],"nested":{"bool":true,"int":1,"list":[1,2,3],"second_secret":"","secret":"","string":"quem"},"secret":"","string":"pato"}`
 
 	if got := out.String(); strings.TrimSpace(got) != expected {
 		t.Fatalf("did not get expected output:\nwanted: %s\ngot: %s", expected, got)
@@ -493,9 +576,15 @@ func TestGetJSONOP(t *testing.T) {
 		t.Fatalf("could not get: %s", err)
 	}
 
-	expected := `{"id":"","title":"some:test","vault":{"id":"example"},"category":"PASSWORD","sections":[{"id":"~annotations","label":"~annotations"},{"id":"nested","label":"nested"},{"id":"list","label":"list"}],"fields":[{"id":"password","type":"CONCEALED","purpose":"PASSWORD","label":"password","value":"cedbdf86fb15cf1237569e9b3188372d623aea9d6a707401aca656645590227c"},{"id":"notesPlain","type":"STRING","purpose":"NOTES","label":"notesPlain","value":"flushed by joao"},{"id":"~annotations.int","section":{"id":"~annotations","label":"~annotations"},"type":"STRING","label":"int","value":"int"},{"id":"int","type":"STRING","label":"int","value":"1"},{"id":"string","type":"STRING","label":"string","value":"pato"},{"id":"~annotations.bool","section":{"id":"~annotations","label":"~annotations"},"type":"STRING","label":"bool","value":"bool"},{"id":"bool","type":"STRING","label":"bool","value":"false"},{"id":"~annotations.secret","section":{"id":"~annotations","label":"~annotations"},"type":"STRING","label":"secret","value":"secret"},{"id":"secret","type":"CONCEALED","label":"secret","value":"very secret"},{"id":"nested.string","section":{"id":"nested"},"type":"STRING","label":"string","value":"quem"},{"id":"~annotations.nested.int","section":{"id":"~annotations","label":"~annotations"},"type":"STRING","label":"nested.int","value":"int"},{"id":"nested.int","section":{"id":"nested"},"type":"STRING","label":"int","value":"1"},{"id":"~annotations.nested.secret","section":{"id":"~annotations","label":"~annotations"},"type":"STRING","label":"nested.secret","value":"secret"},{"id":"nested.secret","section":{"id":"nested"},"type":"CONCEALED","label":"secret","value":"very secret"},{"id":"~annotations.nested.bool","section":{"id":"~annotations","label":"~annotations"},"type":"STRING","label":"nested.bool","value":"bool"},{"id":"nested.bool","section":{"id":"nested"},"type":"STRING","label":"bool","value":"true"},{"id":"~annotations.nested.list.0","section":{"id":"~annotations","label":"~annotations"},"type":"STRING","label":"nested.list.0","value":"int"},{"id":"nested.list.0","section":{"id":"nested"},"type":"STRING","label":"list.0","value":"1"},{"id":"~annotations.nested.list.1","section":{"id":"~annotations","label":"~annotations"},"type":"STRING","label":"nested.list.1","value":"int"},{"id":"nested.list.1","section":{"id":"nested"},"type":"STRING","label":"list.1","value":"2"},{"id":"~annotations.nested.list.2","section":{"id":"~annotations","label":"~annotations"},"type":"STRING","label":"nested.list.2","value":"int"},{"id":"nested.list.2","section":{"id":"nested"},"type":"STRING","label":"list.2","value":"3"},{"id":"list.0","section":{"id":"list"},"type":"STRING","label":"0","value":"one"},{"id":"list.1","section":{"id":"list"},"type":"STRING","label":"1","value":"two"},{"id":"list.2","section":{"id":"list"},"type":"STRING","label":"2","value":"three"}],"createdAt":"0001-01-01T00:00:00Z","updatedAt":"0001-01-01T00:00:00Z"}`
+	id := testConfig.ID
+	testConfig.ID = ""
+	defer func() { testConfig.ID = id }()
+	expected, err := json.Marshal(testConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	if got := out.String(); strings.TrimSpace(got) != expected {
+	if got := out.String(); strings.TrimSpace(got) != strings.TrimSpace(string(expected)) {
 		t.Fatalf("did not get expected output:\nwanted: %s\ngot: %s", expected, got)
 	}
 }
@@ -528,6 +617,11 @@ list:
 nested:
   bool: true
   int: 1
+  list:
+    - 1
+    - 2
+    - 3
+  second_secret: !!secret very secret
   secret: !!secret very secret
   string: quem
 secret: !!secret very secret

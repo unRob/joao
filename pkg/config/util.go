@@ -83,7 +83,6 @@ func checksum(fields []*op.ItemField) string {
 	if err != nil {
 		panic(err)
 	}
-	// newHash := md5.New()
 	df := []string{}
 	for _, field := range fields {
 		if field.ID == "password" || field.ID == "notesPlain" || (field.Section != nil && field.Section.ID == "~annotations") {

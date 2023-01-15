@@ -92,18 +92,25 @@ func (e *Entry) ChildNamed(name string) *Entry {
 }
 
 func (e *Entry) SetPath(parent []string, current string) {
-	e.Path = append(parent, current) // nolint: gocritic
-	switch e.Kind {
-	case yaml.MappingNode, yaml.DocumentNode:
-		for idx := 0; idx < len(e.Content); idx += 2 {
-			key := e.Content[idx]
-			child := e.Content[idx+1]
-			child.SetPath(e.Path, key.Value)
-		}
-	case yaml.SequenceNode:
+	if current != "." {
+		e.Path = append([]string{}, parent...)
+		e.Path = append(e.Path, current)
+	}
+	if e.IsScalar() {
+		return
+	}
+
+	if e.Kind == yaml.SequenceNode {
 		for idx, child := range e.Content {
-			child.Path = append(e.Path, fmt.Sprintf("%d", idx)) // nolint: gocritic
+			child.SetPath(e.Path, fmt.Sprintf("%d", idx))
 		}
+		return
+	}
+
+	for idx := 0; idx < len(e.Content); idx += 2 {
+		key := e.Content[idx]
+		child := e.Content[idx+1]
+		child.SetPath(e.Path, key.Value)
 	}
 }
 
@@ -118,7 +125,6 @@ func (e *Entry) UnmarshalYAML(node *yaml.Node) error {
 			if err := n.Decode(&sub); err != nil {
 				return err
 			}
-			sub.SetPath(e.Path, n.Value)
 			e.Content = append(e.Content, sub)
 		}
 	case yaml.DocumentNode, yaml.MappingNode:
@@ -139,7 +145,6 @@ func (e *Entry) UnmarshalYAML(node *yaml.Node) error {
 			if valueNode.Tag == YAMLTypeMetaConfig {
 				key.Type = YAMLTypeMetaConfig
 			}
-			value.SetPath(e.Path, key.Value)
 			e.Content = append(e.Content, key, value)
 		}
 	default:
@@ -321,7 +326,8 @@ func (e *Entry) FromOP(fields []*op.ItemField) error {
 				kind = yaml.SequenceNode
 			}
 			child := NewEntry(key, kind)
-			child.Path = append(container.Path, key) // nolint: gocritic
+			child.Path = append([]string{}, container.Path...)
+			child.Path = append(child.Path, key)
 
 			keyEntry := NewEntry(child.Name(), yaml.ScalarNode)
 			keyEntry.Value = key
@@ -341,7 +347,7 @@ func (e *Entry) ToOP() []*op.ItemField {
 		name := e.Path[len(e.Path)-1]
 		fullPath := strings.Join(e.Path, ".")
 		if len(e.Path) > 1 {
-			section = &op.ItemSection{ID: e.Path[0]}
+			section = &op.ItemSection{ID: e.Path[0], Label: e.Path[0]}
 			name = strings.Join(e.Path[1:], ".")
 		}
 
@@ -371,7 +377,6 @@ func (e *Entry) ToOP() []*op.ItemField {
 	}
 
 	if e.Kind == yaml.SequenceNode {
-		ret := []*op.ItemField{}
 		for _, child := range e.Content {
 			ret = append(ret, child.ToOP()...)
 		}
@@ -396,7 +401,7 @@ func (e *Entry) Name() string {
 }
 
 func (e *Entry) AsMap() any {
-	if len(e.Content) == 0 {
+	if e.IsScalar() {
 		switch e.TypeStr() {
 		case "bool":
 			var boolVal bool
@@ -425,17 +430,15 @@ func (e *Entry) AsMap() any {
 
 	if e.Kind == yaml.SequenceNode {
 		ret := []any{}
-		for _, child := range e.Content {
-			ret = append(ret, child.AsMap())
+		for _, sub := range e.Content {
+			ret = append(ret, sub.AsMap())
 		}
 		return ret
 	}
 
 	ret := map[string]any{}
-	for idx, child := range e.Content {
-		if idx%2 == 0 {
-			continue
-		}
+	for idx := 1; idx < len(e.Content); idx += 2 {
+		child := e.Content[idx]
 		ret[child.Name()] = child.AsMap()
 	}
 	return ret

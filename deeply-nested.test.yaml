@@ -1,0 +1,9 @@
+_config: !!joao
+  name: some:deeply-nested-test
+  vault: example
+root:
+  of:
+    deeply:
+      nested_map: asdf
+      nested_list:
+        - 10.42.31.42/32

@@ -32,7 +32,7 @@ var Redact = &command.Command{
 				return err
 			}
 
-			if err := cfg.AsFile(path); err != nil {
+			if err := cfg.AsFile(path, config.OutputModeRedacted); err != nil {
 				return err
 			}
 		}

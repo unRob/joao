@@ -32,11 +32,21 @@ var Fetch = &command.Command{
 	Action: func(cmd *command.Command) error {
 		paths := cmd.Arguments[0].ToValue().([]string)
 		for _, path := range paths {
-			remote, err := config.Load(path, true)
+			local, err := config.Load(path, false)
 			if err != nil {
 				return err
 			}
-			local, err := config.Load(path, false)
+
+			if dryRun := cmd.Options["dry-run"].ToValue().(bool); dryRun {
+				logrus.Warnf("dry-run: comparing %s to %s", local.OPURL(), path)
+				if err := local.DiffRemote(path, false, true, cmd.Cobra.OutOrStdout(), cmd.Cobra.OutOrStderr()); err != nil {
+					return err
+				}
+				logrus.Warnf("dry-run: did not update %s", path)
+				continue
+			}
+
+			remote, err := config.Load(path, true)
 			if err != nil {
 				return err
 			}
@@ -45,20 +55,11 @@ var Fetch = &command.Command{
 				return err
 			}
 
-			if dryRun := cmd.Options["dry-run"].ToValue().(bool); dryRun {
-				b, err := local.AsYAML()
-				if err != nil {
-					return err
-				}
-				logrus.Warnf("dry-run: would write to %s", path)
-				_, _ = cmd.Cobra.OutOrStdout().Write(b)
-			} else {
-				if err := local.AsFile(path); err != nil {
-					return err
-				}
+			if err := local.AsFile(path); err != nil {
+				return err
 			}
 
-			logrus.Infof("Updated %s", path)
+			logrus.Infof("Fetched %s => %s", remote.OPURL(), path)
 		}
 
 		logrus.Info("Done")

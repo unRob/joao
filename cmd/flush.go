@@ -38,8 +38,9 @@ var Flush = &command.Command{
 	},
 	Action: func(cmd *command.Command) error {
 		paths := cmd.Arguments[0].ToValue().([]string)
+		dryRun := cmd.Options["dry-run"].ToValue().(bool)
 
-		if dryRun := cmd.Options["dry-run"].ToValue().(bool); dryRun {
+		if dryRun {
 			opclient.Use(&opclient.CLI{DryRun: true})
 		}
 
@@ -47,6 +48,15 @@ var Flush = &command.Command{
 			cfg, err := config.Load(path, false)
 			if err != nil {
 				return err
+			}
+
+			if dryRun {
+				logrus.Warnf("dry-run: comparing %s to %s", path, cfg.OPURL())
+				if err := cfg.DiffRemote(path, false, false, cmd.Cobra.OutOrStdout(), cmd.Cobra.OutOrStderr()); err != nil {
+					return err
+				}
+				logrus.Warnf("dry-run: did not update %s", cfg.OPURL())
+				continue
 			}
 
 			if err := opclient.Update(cfg.Vault, cfg.Name, cfg.ToOP()); err != nil {
@@ -58,6 +68,7 @@ var Flush = &command.Command{
 					return err
 				}
 			}
+			logrus.Infof("Flushed %s to %s", path, cfg.OPURL())
 		}
 
 		logrus.Info("Done")

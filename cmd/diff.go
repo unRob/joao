@@ -11,7 +11,7 @@ import (
 var Diff = &command.Command{
 	Path:        []string{"diff"},
 	Summary:     "Shows differences between local and remote configs",
-	Description: `Fetches remote and compares against local, ignoring comments but respecting order.`,
+	Description: `Fetches remote and compares against local, ignoring comments but respecting order. The diff output shows what would happen upon running ﹅joao fetch﹅. Specify ﹅--remote﹅ to show what would happen upon ﹅joao flush﹅`,
 	Arguments: command.Arguments{
 		{
 			Name:        "config",
@@ -26,7 +26,7 @@ var Diff = &command.Command{
 	Options: command.Options{
 		"output": {
 			Description: "How to format the differences",
-			Type:        "string",
+			Type:        command.ValueTypeString,
 			Default:     "auto",
 			Values: &command.ValueSource{
 				Static: &[]string{
@@ -34,15 +34,21 @@ var Diff = &command.Command{
 				},
 			},
 		},
+		"remote": {
+			Description: "Shows what would happen on `flush` instead of `fetch`",
+			Type:        command.ValueTypeString,
+			Default:     false,
+		},
 		"redacted": {
 			Description: "Compare redacted versions",
-			Type:        "bool",
+			Type:        command.ValueTypeBoolean,
 			Default:     false,
 		},
 	},
 	Action: func(cmd *command.Command) error {
 		paths := cmd.Arguments[0].ToValue().([]string)
 		redacted := cmd.Options["redacted"].ToValue().(bool)
+		remote := cmd.Options["remote"].ToValue().(bool)
 		for _, path := range paths {
 
 			local, err := config.Load(path, false)
@@ -50,7 +56,7 @@ var Diff = &command.Command{
 				return err
 			}
 
-			if err := local.DiffRemote(path, redacted, cmd.Cobra.OutOrStdout(), cmd.Cobra.OutOrStderr()); err != nil {
+			if err := local.DiffRemote(path, redacted, remote, cmd.Cobra.OutOrStdout(), cmd.Cobra.OutOrStderr()); err != nil {
 				return err
 			}
 		}

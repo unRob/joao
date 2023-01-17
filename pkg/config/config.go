@@ -156,11 +156,21 @@ func (cfg *Config) Merge(other *Config) error {
 	return cfg.Tree.Merge(other.Tree)
 }
 
-func (cfg *Config) DiffRemote(path string, redacted bool, stdout, stderr io.Writer) error {
+func (cfg *Config) OPURL() string {
+	return fmt.Sprintf("op://%s/%s", cfg.Vault, cfg.Name)
+}
+
+func (cfg *Config) DiffRemote(path string, redacted, asFetch bool, stdout, stderr io.Writer) error {
 	logrus.Debugf("loading remote for %s", path)
 	remote, err := Load(path, true)
 	if err != nil {
-		return err
+		if asFetch {
+			return err
+		}
+
+		if !strings.Contains(err.Error(), " isn't an item in ") {
+			return fmt.Errorf("could not fetch remote item: %w", err)
+		}
 	}
 
 	modes := []OutputMode{OutputModeNoComments, OutputModeSorted, OutputModeNoConfig, OutputModeStandardYAML}
@@ -168,6 +178,7 @@ func (cfg *Config) DiffRemote(path string, redacted bool, stdout, stderr io.Writ
 		modes = append(modes, OutputModeRedacted)
 	}
 
+	logrus.Debugf("loading local for %s", path)
 	localBytes, err := cfg.AsYAML(modes...)
 	if err != nil {
 		return err
@@ -179,18 +190,30 @@ func (cfg *Config) DiffRemote(path string, redacted bool, stdout, stderr io.Writ
 	}
 	defer cleanupLocalDiff()
 
-	remoteBytes, err := remote.AsYAML(modes...)
-	if err != nil {
-		return err
-	}
-	file2, cleanupRemoteDiff, err := tempfile(remoteBytes)
-	if err != nil {
-		return err
-	}
-	defer cleanupRemoteDiff()
+	file2 := "/dev/null"
+	opPath := "(new) " + cfg.OPURL()
 
-	opPath := fmt.Sprintf("op://%s/%s", cfg.Vault, remote.Name)
-	diff := exec.Command("diff", "-u", "-L", path, file1, "-L", opPath, file2)
+	if remote != nil {
+		remoteBytes, err := remote.AsYAML(modes...)
+		if err != nil {
+			return err
+		}
+		f2, cleanupRemoteDiff, err := tempfile(remoteBytes)
+		if err != nil {
+			return err
+		}
+		file2 = f2
+		opPath = remote.OPURL()
+		defer cleanupRemoteDiff()
+	}
+
+	var diff *exec.Cmd
+	if asFetch {
+		diff = exec.Command("diff", "-u", "-L", path, file1, "-L", opPath, file2)
+	} else {
+		diff = exec.Command("diff", "-u", "-L", opPath, file2, "-L", path, file1)
+	}
+
 	diff.Env = os.Environ()
 
 	diff.Stdout = stdout

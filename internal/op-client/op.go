@@ -34,7 +34,7 @@ func Get(vault, name string) (*op.Item, error) {
 func Update(vault, name string, item *op.Item) error {
 	remote, err := client.Get(vault, name)
 	if err != nil {
-		if strings.Contains(err.Error(), fmt.Sprintf("\"%s\" isn't an item in the ", name)) {
+		if strings.Contains(err.Error(), fmt.Sprintf("\"%s\" isn't an item in ", name)) {
 			return client.Create(item)
 		}
 

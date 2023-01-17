@@ -197,7 +197,7 @@ func (e *Entry) asNode() *yaml.Node {
 
 	if yamlOutput.Has(OutputModeStandardYAML) {
 		if e.IsScalar() {
-			if len(e.Path) >= 0 {
+			if len(e.Path) > 0 {
 				if !strings.Contains(n.Value, "\n") {
 					n.Style &= yaml.FoldedStyle
 				} else {

@@ -43,7 +43,7 @@ const (
 	OutputModeSorted OutputMode = 4
 	// OutputModeNoConfig does not output the _config key if any.
 	OutputModeNoConfig OutputMode = 8
-	// OutputModeStandardYAML formats strings and arrays uniformly
+	// OutputModeStandardYAML formats strings and arrays uniformly.
 	OutputModeStandardYAML OutputMode = 16
 )
 

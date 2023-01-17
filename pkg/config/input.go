@@ -24,8 +24,11 @@ func Load(ref string, preferRemote bool) (*Config, error) {
 		vault := ""
 
 		if argIsYAMLFile(ref) {
-			var err error
-			name, vault, err = VaultAndNameFrom(ref, nil)
+			path, err := filepath.Abs(ref)
+			if err != nil {
+				return nil, fmt.Errorf("could not find asbolute path to file %s: %w", ref, err)
+			}
+			name, vault, err = VaultAndNameFrom(path, nil)
 			if err != nil {
 				return nil, err
 			}

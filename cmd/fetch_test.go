@@ -69,36 +69,26 @@ func TestFetch(t *testing.T) {
 		t.Fatalf("could not get: %s", err)
 	}
 
-	expected := `_config: !!joao
-  name: some:test
-  vault: example
-# not sorted on purpose
-int: 1 # line
-# foot
-string: pato
-bool: false
-secret: !!secret very secret
-nested:
-  int: 1
-  bool: true
-  list:
-    - 1
-    - 2
-    - 3
-  secret: !!secret very secret
-  second_secret: !!secret very secret
-  string: quem
-list:
-  - one
-  - two
-  - three
-o:
-  ganso:
-    gosto: da dupla
-e-fez-tambem:
-  - quém!
-  - quém!
-  - quém!`
+	expected := `--- /Users/roberto/src/joao/test.yaml
++++ op://example/some:test
+@@ -1,4 +1,8 @@
+ bool: false
++e-fez-tambem:
++  - quém!
++  - quém!
++  - quém!
+ int: 1
+ list:
+   - one
+@@ -14,5 +18,8 @@
+   second_secret: !!secret very secret
+   secret: !!secret very secret
+   string: quem
++o:
++  ganso:
++    gosto: da dupla
+ secret: !!secret very secret
+ string: pato`
 
 	if got := out.String(); strings.TrimSpace(got) != expected {
 		t.Fatalf("did not get expected output:\nwanted: %s\ngot: %s", expected, got)

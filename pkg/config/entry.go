@@ -428,7 +428,7 @@ func (e *Entry) AsMap() any {
 			}
 			return boolVal
 		case "int":
-			var intVal uint64
+			var intVal int64
 			err := e.asNode().Decode(&intVal)
 			if err != nil {
 				panic(fmt.Sprintf("could not encode int at %s, %s", e.Path, err))

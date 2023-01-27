@@ -36,7 +36,7 @@ var Diff = &command.Command{
 		},
 		"remote": {
 			Description: "Shows what would happen on `flush` instead of `fetch`",
-			Type:        command.ValueTypeString,
+			Type:        command.ValueTypeBoolean,
 			Default:     false,
 		},
 		"redacted": {

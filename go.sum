@@ -1,6 +1,8 @@
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
-git.rob.mx/nidito/chinampa v0.0.0-20230114231059-a14ffd07b963 h1:PRpd8b8qRkrQB8kSlF2jD1NxRC0Vau78qg1zMC3EJgs=
-git.rob.mx/nidito/chinampa v0.0.0-20230114231059-a14ffd07b963/go.mod h1:obhWsLkUIlKJyhfa7uunrSs2O44JBqsegSAtAvY2LRM=
+git.rob.mx/nidito/chinampa v0.0.0-20230118063803-f0a8223e8d76 h1:sjFPutuRROqgJq4cPd+lgUgcW+vQPzA/ZpEqNoHuDQU=
+git.rob.mx/nidito/chinampa v0.0.0-20230118063803-f0a8223e8d76/go.mod h1:obhWsLkUIlKJyhfa7uunrSs2O44JBqsegSAtAvY2LRM=
+git.rob.mx/nidito/chinampa v0.0.0-20230123042918-20814bccd961 h1:vFGqaTxjC499DUZ0iCuXImEeSSS/osihfFsySiF2pwY=
+git.rob.mx/nidito/chinampa v0.0.0-20230123042918-20814bccd961/go.mod h1:obhWsLkUIlKJyhfa7uunrSs2O44JBqsegSAtAvY2LRM=
 github.com/1Password/connect-sdk-go v1.5.0 h1:F0WJcLSzGg3iXEDY49/ULdszYKsQLGTzn+2cyYXqiyk=
 github.com/1Password/connect-sdk-go v1.5.0/go.mod h1:TdynFeyvaRoackENbJ8RfJokH+WAowAu1MLmUbdMq6s=
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=
@@ -50,6 +52,8 @@ github.com/evanphx/json-patch/v5 v5.6.0/go.mod h1:G79N1coSVB93tBe7j6PhzjmR3/2Vvl
 github.com/fatih/color v1.7.0/go.mod h1:Zm6kSWBoL9eyXnKyktHP6abPY2pDugNf5KwzbycvMj4=
 github.com/fatih/color v1.13.0 h1:8LOYc1KYPPmyKMuN8QV2DNRWNbLo6LZ0iLs8+mlH53w=
 github.com/fatih/color v1.13.0/go.mod h1:kLAiJbzzSOZDVNGyDpeOxJ47H46qBXwg5ILebYFFOfk=
+github.com/fatih/color v1.14.1 h1:qfhVLaG5s+nCROl1zJsZRxFeYrHLqWroPOQ8BWiNb4w=
+github.com/fatih/color v1.14.1/go.mod h1:2oHN61fhTpgcxD3TSWCgKDiH1+x4OiDVVGH8WlgGZGg=
 github.com/fatih/structs v1.1.0 h1:Q7juDM0QtcnhCpeyLGQKyg4TOIghuNXrkL32pHAUMxo=
 github.com/fogleman/gg v1.2.1-0.20190220221249-0403632d5b90/go.mod h1:R/bRT+9gY/C5z7JzPU0zXsXHKM4/ayA+zqcVNZzPa1k=
 github.com/frankban/quicktest v1.13.0 h1:yNZif1OkDfNoDfb9zZa9aXIpejNR4F23Wely0c+Qdqk=

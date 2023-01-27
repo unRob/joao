@@ -7,6 +7,7 @@ platforms=(
   linux/arm64
   linux/arm
   linux/mips
+  linux/mips64
   darwin/arm64
   darwin/amd64
 )

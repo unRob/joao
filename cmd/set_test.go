@@ -99,7 +99,8 @@ func TestSetSecret(t *testing.T) {
 	}
 	defer cleanup()
 
-	err = Set.Run(cmd, []string{path, "secret", "--secret"})
+	os.Args = []string{path, "secret", "--secret"}
+	err = Set.Run(cmd, []string{path, "secret"})
 	if err != nil {
 		t.Fatalf("Threw on good set: %s", err)
 	}
@@ -147,7 +148,8 @@ func TestSetFromFile(t *testing.T) {
 	}
 	defer cleanup()
 
-	err = Set.Run(cmd, []string{path, "string", "--input", dataPath})
+	os.Args = []string{path, "string", "--input", dataPath}
+	err = Set.Run(cmd, []string{path, "string"})
 	if err != nil {
 		t.Fatalf("Threw on good set: %s", err)
 	}
@@ -390,7 +392,8 @@ func TestDelete(t *testing.T) {
 	}
 	defer cleanup()
 
-	err = Set.Run(cmd, []string{path, "string", "--delete"})
+	os.Args = []string{path, "string", "--delete"}
+	err = Set.Run(cmd, []string{path, "string"})
 	if err != nil {
 		t.Fatalf("Threw on good set delete: %s", err)
 	}
@@ -435,7 +438,8 @@ func TestDeleteNested(t *testing.T) {
 	}
 	defer cleanup()
 
-	err = Set.Run(cmd, []string{path, "nested.string", "--delete"})
+	os.Args = []string{path, "nested.string", "--delete"}
+	err = Set.Run(cmd, []string{path, "nested.string"})
 	if err != nil {
 		t.Fatalf("Threw on good set delete nested: %s", err)
 	}

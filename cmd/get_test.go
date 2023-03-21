@@ -311,7 +311,8 @@ func TestGetRedacted(t *testing.T) {
 	cmd.SetOut(&out)
 	cmd.SetErr(&out)
 	Get.Cobra = cmd
-	err := Get.Run(cmd, []string{root + "/test.yaml", ".", "--redacted"})
+	os.Args = []string{root + "/test.yaml", ".", "--redacted"}
+	err := Get.Run(cmd, []string{root + "/test.yaml", "."})
 
 	if err != nil {
 		t.Fatalf("could not get: %s", err)
@@ -337,7 +338,8 @@ func TestGetPath(t *testing.T) {
 	cmd.SetOut(&out)
 	cmd.SetErr(&out)
 	Get.Cobra = cmd
-	err := Get.Run(cmd, []string{root + "/test.yaml", "nested.secret"})
+	os.Args = []string{root + "/test.yaml", "nested.secret"}
+	err := Get.Run(cmd, os.Args)
 
 	if err != nil {
 		t.Fatalf("could not get: %s", err)
@@ -351,7 +353,8 @@ func TestGetPath(t *testing.T) {
 	out = bytes.Buffer{}
 	cmd.SetOut(&out)
 	cmd.SetErr(&out)
-	err = Get.Run(cmd, []string{root + "/test.yaml", "nested", "--output", "diff-yaml"})
+	os.Args = []string{root + "/test.yaml", "nested", "--output", "diff-yaml"}
+	err = Get.Run(cmd, []string{root + "/test.yaml", "nested"})
 
 	if err != nil {
 		t.Fatalf("could not get: %s", err)
@@ -382,7 +385,8 @@ func TestGetPathCollection(t *testing.T) {
 	cmd.SetOut(&out)
 	cmd.SetErr(&out)
 	Get.Cobra = cmd
-	err := Get.Run(cmd, []string{root + "/test.yaml", "nested", "--output", "yaml"})
+	os.Args = []string{root + "/test.yaml", "nested", "--output", "yaml"}
+	err := Get.Run(cmd, []string{root + "/test.yaml", "nested"})
 
 	if err != nil {
 		t.Fatalf("could not get: %s", err)
@@ -413,7 +417,8 @@ func TestGetDiff(t *testing.T) {
 	cmd.SetOut(&out)
 	cmd.SetErr(&out)
 	Get.Cobra = cmd
-	err := Get.Run(cmd, []string{root + "/test.yaml", ".", "--output", "diff-yaml"})
+	os.Args = []string{root + "/test.yaml", ".", "--output", "diff-yaml"}
+	err := Get.Run(cmd, []string{root + "/test.yaml", "."})
 
 	if err != nil {
 		t.Fatalf("could not get: %s", err)
@@ -456,7 +461,8 @@ func TestGetJSON(t *testing.T) {
 	cmd.SetOut(&out)
 	cmd.SetErr(&out)
 	Get.Cobra = cmd
-	err := Get.Run(cmd, []string{root + "/test.yaml", ".", "--output", "json"})
+	os.Args = []string{root + "/test.yaml", ".", "--output", "json"}
+	err := Get.Run(cmd, []string{root + "/test.yaml", "."})
 
 	if err != nil {
 		t.Fatalf("could not get: %s", err)
@@ -479,7 +485,8 @@ func TestGetDeepJSON(t *testing.T) {
 	cmd.SetOut(&out)
 	cmd.SetErr(&out)
 	Get.Cobra = cmd
-	err := Get.Run(cmd, []string{root + "/deeply-nested.test.yaml", ".", "--output", "json"})
+	os.Args = []string{root + "/deeply-nested.test.yaml", ".", "--output", "json"}
+	err := Get.Run(cmd, []string{root + "/deeply-nested.test.yaml", "."})
 
 	if err != nil {
 		t.Fatalf("could not get: %s", err)
@@ -502,7 +509,8 @@ func TestGetJSONPathScalar(t *testing.T) {
 	cmd.SetOut(&out)
 	cmd.SetErr(&out)
 	Get.Cobra = cmd
-	err := Get.Run(cmd, []string{root + "/test.yaml", "nested.secret", "--output", "json"})
+	os.Args = []string{root + "/test.yaml", "nested.secret", "--output", "json"}
+	err := Get.Run(cmd, []string{root + "/test.yaml", "nested.secret"})
 
 	if err != nil {
 		t.Fatalf("could not get: %s", err)
@@ -525,7 +533,8 @@ func TestGetJSONPathCollection(t *testing.T) {
 	cmd.SetOut(&out)
 	cmd.SetErr(&out)
 	Get.Cobra = cmd
-	err := Get.Run(cmd, []string{root + "/test.yaml", "nested", "--output", "json"})
+	os.Args = []string{root + "/test.yaml", "nested", "--output", "json"}
+	err := Get.Run(cmd, []string{root + "/test.yaml", "nested"})
 
 	if err != nil {
 		t.Fatalf("could not get: %s", err)
@@ -548,7 +557,8 @@ func TestGetJSONRedacted(t *testing.T) {
 	cmd.SetOut(&out)
 	cmd.SetErr(&out)
 	Get.Cobra = cmd
-	err := Get.Run(cmd, []string{root + "/test.yaml", ".", "--output", "json", "--redacted"})
+	os.Args = []string{root + "/test.yaml", ".", "--output", "json", "--redacted"}
+	err := Get.Run(cmd, []string{root + "/test.yaml", "."})
 
 	if err != nil {
 		t.Fatalf("could not get: %s", err)
@@ -570,7 +580,8 @@ func TestGetJSONOP(t *testing.T) {
 	cmd.SetOut(&out)
 	cmd.SetErr(&out)
 	Get.Cobra = cmd
-	err := Get.Run(cmd, []string{root + "/test.yaml", ".", "--output", "op"})
+	os.Args = []string{root + "/test.yaml", ".", "--output", "op"}
+	err := Get.Run(cmd, []string{root + "/test.yaml", "."})
 
 	if err != nil {
 		t.Fatalf("could not get: %s", err)
@@ -602,7 +613,8 @@ func TestGetRemote(t *testing.T) {
 	cmd.SetErr(&out)
 	Get.Cobra = cmd
 	logrus.SetLevel(logrus.DebugLevel)
-	err := Get.Run(cmd, []string{root + "/test.yaml", ".", "--output", "diff-yaml", "--remote"})
+	os.Args = []string{root + "/test.yaml", "."}
+	err := Get.Run(cmd, []string{root + "/test.yaml", "."})
 
 	if err != nil {
 		t.Fatalf("could not get: %s", err)

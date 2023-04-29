@@ -6,23 +6,25 @@ import (
 	"os"
 
 	"git.rob.mx/nidito/chinampa"
+	"git.rob.mx/nidito/chinampa/pkg/env"
+	"git.rob.mx/nidito/chinampa/pkg/logger"
 	"git.rob.mx/nidito/chinampa/pkg/runtime"
 	"git.rob.mx/nidito/joao/cmd"
 	"git.rob.mx/nidito/joao/pkg/version"
-	"github.com/sirupsen/logrus"
 )
 
-func main() {
-	logrus.SetFormatter(&logrus.TextFormatter{
-		DisableLevelTruncation: true,
-		DisableTimestamp:       true,
-		ForceColors:            runtime.ColorEnabled(),
-	})
-
-	if runtime.DebugEnabled() {
-		logrus.SetLevel(logrus.DebugLevel)
-		logrus.Debug("Debugging enabled")
+func logLevel() logger.Level {
+	if os.Getenv(env.Debug) == "trace" {
+		return logger.LevelTrace
+	} else if runtime.DebugEnabled() {
+		return logger.LevelDebug
 	}
+
+	return logger.LevelInfo
+}
+
+func main() {
+	logger.Configure("joao", logLevel())
 
 	chinampa.Register(
 		cmd.Get,
@@ -48,7 +50,7 @@ Secret values are specified using the ﹅!!secret﹅ YAML tag.
 `,
 		Version: version.Version,
 	}); err != nil {
-		logrus.Errorf("total failure: %s", err)
+		logger.Errorf("total failure: %s", err)
 		os.Exit(2)
 	}
 }

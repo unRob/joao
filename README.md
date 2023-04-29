@@ -175,7 +175,7 @@ export PLUGIN_SHA="$(openssl dgst -sha256 -hex "$VAULT_PLUGIN_DIR/joao" | awk '{
 export VERSION="$($VAULT_PLUGIN_DIR/joao --version)"
 
 # register
-vault plugin register -sha256="$PLUGIN_SHA" -command=joao -args="vault,server" -version="$VERSION" secret joao
+vault plugin register -sha256="$PLUGIN_SHA" -command=joao -args="vault-plugin" -version="$VERSION" secret joao
 
 # configure, add `vault` to set a default vault for querying
 vault write config/1password "host=$OP_CONNECT_HOST" "token=$OP_CONNECT_TOKEN" # vault=my-default-vault

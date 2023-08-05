@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"os"
 
+	opClient "git.rob.mx/nidito/joao/internal/op-client"
 	op "github.com/1Password/connect-sdk-go/onepassword"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"
@@ -77,7 +78,7 @@ func (cfg *Config) ToOP() *op.Item {
 	fields := append([]*op.ItemField{}, defaultItemFields...)
 
 	datafields := cfg.Tree.ToOP()
-	cs := checksum(datafields)
+	cs := opClient.Checksum(datafields)
 
 	fields[0].Value = cs
 	fields = append(fields, datafields...)
@@ -105,7 +106,7 @@ func (cfg *Config) ToOP() *op.Item {
 	}
 }
 
-// MarshalYAML implements `yaml.Marshal``.
+// MarshalYAML implements `yaml.Marshal“.
 func (cfg *Config) MarshalYAML() (any, error) {
 	return cfg.Tree.MarshalYAML()
 }

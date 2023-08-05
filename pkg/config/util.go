@@ -5,15 +5,12 @@ package config
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 	"text/template"
 
-	op "github.com/1Password/connect-sdk-go/onepassword"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/crypto/blake2b"
 	"gopkg.in/yaml.v3"
 )
 
@@ -36,7 +33,7 @@ func VaultAndNameFrom(path string, buf []byte) (name string, vault string, err e
 	smc := &singleModeConfig{}
 	if buf == nil {
 		var err error
-		buf, err = ioutil.ReadFile(path)
+		buf, err = os.ReadFile(path)
 		if err != nil {
 			return "", "", fmt.Errorf("could not read file %s", path)
 		}
@@ -76,28 +73,6 @@ func VaultAndNameFrom(path string, buf []byte) (name string, vault string, err e
 		return "", "", err
 	}
 	return nameBuf.String(), rmc.Vault, nil
-}
-
-func checksum(fields []*op.ItemField) string {
-	newHash, err := blake2b.New256(nil)
-	if err != nil {
-		panic(err)
-	}
-	df := []string{}
-	for _, field := range fields {
-		if field.ID == "password" || field.ID == "notesPlain" || (field.Section != nil && field.Section.ID == "~annotations") {
-			continue
-		}
-		label := field.Label
-		if field.Section != nil && field.Section.ID != "" {
-			label = field.Section.ID + "." + label
-		}
-		df = append(df, label+field.Value)
-	}
-	sort.Strings(df)
-	newHash.Write([]byte(strings.Join(df, "")))
-	checksum := newHash.Sum(nil)
-	return fmt.Sprintf("%x", checksum)
 }
 
 func isNumeric(s string) bool {

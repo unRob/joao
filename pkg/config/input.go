@@ -4,7 +4,7 @@ package config
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -65,7 +65,7 @@ func Load(ref string, preferRemote bool) (*Config, error) {
 
 // FromFile reads a path and returns a config.
 func FromFile(path string) (*Config, error) {
-	buf, err := ioutil.ReadFile(path)
+	buf, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("could not read file %s", path)
 	}
@@ -113,7 +113,7 @@ func FromOP(item *op.Item) (*Config, error) {
 		Tree:  NewEntry("root", yaml.MappingNode),
 	}
 
-	if cs := checksum(item.Fields); cs != item.GetValue("password") {
+	if cs := opClient.Checksum(item.Fields); cs != item.GetValue("password") {
 		logrus.Warnf(warnChecksumMismatch, fmt.Sprintf("%s/%s", item.Vault.ID, item.Title), cs, item.GetValue("password"))
 	}
 	err := cfg.Tree.FromOP(item.Fields)

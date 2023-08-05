@@ -368,9 +368,9 @@ func (e *Entry) ToOP() []*op.ItemField {
 			name = strings.Join(e.Path[1:], ".")
 		}
 
-		fieldType := "STRING"
+		fieldType := op.FieldTypeString
 		if e.IsSecret() {
-			fieldType = "CONCEALED"
+			fieldType = op.FieldTypeConcealed
 		}
 
 		if annotationType := e.TypeStr(); annotationType != "" {
@@ -378,7 +378,7 @@ func (e *Entry) ToOP() []*op.ItemField {
 				ID:      "~annotations." + fullPath,
 				Section: annotationsSection,
 				Label:   fullPath,
-				Type:    "STRING",
+				Type:    op.FieldTypeString,
 				Value:   annotationType,
 			})
 		}

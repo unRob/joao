@@ -4,7 +4,6 @@ package config
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"sort"
 	"strings"
@@ -84,7 +83,7 @@ func KeysFromYAML(data []byte) ([]string, error) {
 func AutocompleteKeys(cmd *command.Command, currentValue, config string) ([]string, cobra.ShellCompDirective, error) {
 	flag := cobra.ShellCompDirectiveError
 	file := cmd.Arguments[0].ToString()
-	buf, err := ioutil.ReadFile(file)
+	buf, err := os.ReadFile(file)
 	if err != nil {
 		return nil, flag, fmt.Errorf("could not read file %s", file)
 	}

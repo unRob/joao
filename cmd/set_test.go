@@ -6,7 +6,6 @@ import (
 	"bytes"
 	"fmt"
 	"io/fs"
-	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
@@ -18,7 +17,7 @@ import (
 
 func tempTestYaml(root, name string, data []byte) (string, func(), error) {
 	path := fmt.Sprintf("%s/test-%s.yaml", root, name)
-	if err := ioutil.WriteFile(path, data, fs.FileMode(0644)); err != nil {
+	if err := os.WriteFile(path, data, fs.FileMode(0644)); err != nil {
 		return path, nil, fmt.Errorf("could not create test file")
 	}
 	return path, func() { os.Remove(path) }, nil
@@ -39,7 +38,7 @@ func TestSet(t *testing.T) {
 	cmd.Flags().Bool("delete", false, "")
 	cmd.Flags().Bool("json", false, "")
 	cmd.Flags().Bool("flush", false, "")
-	original, err := ioutil.ReadFile(root + "/test.yaml")
+	original, err := os.ReadFile(root + "/test.yaml")
 	if err != nil {
 		t.Fatalf("could not read file")
 	}
@@ -55,7 +54,7 @@ func TestSet(t *testing.T) {
 		t.Fatalf("Threw on good set: %s", err)
 	}
 
-	changed, err := ioutil.ReadFile(path)
+	changed, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("could not read file")
 	}
@@ -88,7 +87,7 @@ func TestSetSecret(t *testing.T) {
 	cmd.Flags().Bool("delete", false, "")
 	cmd.Flags().Bool("json", false, "")
 	cmd.Flags().Bool("flush", false, "")
-	original, err := ioutil.ReadFile(root + "/test.yaml")
+	original, err := os.ReadFile(root + "/test.yaml")
 	if err != nil {
 		t.Fatalf("could not read file")
 	}
@@ -105,7 +104,7 @@ func TestSetSecret(t *testing.T) {
 		t.Fatalf("Threw on good set: %s", err)
 	}
 
-	changed, err := ioutil.ReadFile(path)
+	changed, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("could not read file")
 	}
@@ -131,7 +130,7 @@ func TestSetFromFile(t *testing.T) {
 	cmd.Flags().Bool("delete", false, "")
 	cmd.Flags().Bool("json", false, "")
 	cmd.Flags().Bool("flush", false, "")
-	original, err := ioutil.ReadFile(root + "/test.yaml")
+	original, err := os.ReadFile(root + "/test.yaml")
 	if err != nil {
 		t.Fatalf("could not read file")
 	}
@@ -154,7 +153,7 @@ func TestSetFromFile(t *testing.T) {
 		t.Fatalf("Threw on good set: %s", err)
 	}
 
-	changed, err := ioutil.ReadFile(path)
+	changed, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("could not read file")
 	}
@@ -184,7 +183,7 @@ func TestSetNew(t *testing.T) {
 	cmd.Flags().Bool("json", false, "")
 	cmd.Flags().Bool("flush", false, "")
 	cmd.Flags().StringP("input", "i", "/dev/stdin", "")
-	original, err := ioutil.ReadFile(root + "/test.yaml")
+	original, err := os.ReadFile(root + "/test.yaml")
 	if err != nil {
 		t.Fatalf("could not read file")
 	}
@@ -200,7 +199,7 @@ func TestSetNew(t *testing.T) {
 		t.Fatalf("Threw on good new set: %s", err)
 	}
 
-	changed, err := ioutil.ReadFile(path)
+	changed, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("could not read file")
 	}
@@ -235,7 +234,7 @@ func TestSetNested(t *testing.T) {
 	cmd.Flags().Bool("json", false, "")
 	cmd.Flags().Bool("flush", false, "")
 	cmd.Flags().StringP("input", "i", "/dev/stdin", "")
-	original, err := ioutil.ReadFile(root + "/test.yaml")
+	original, err := os.ReadFile(root + "/test.yaml")
 	if err != nil {
 		t.Fatalf("could not read file")
 	}
@@ -251,7 +250,7 @@ func TestSetNested(t *testing.T) {
 		t.Fatalf("Threw on good nested set: %s", err)
 	}
 
-	changed, err := ioutil.ReadFile(path)
+	changed, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("could not read file")
 	}
@@ -283,7 +282,7 @@ func TestSetJSON(t *testing.T) {
 	cmd.Flags().Bool("json", true, "")
 	cmd.Flags().Bool("flush", false, "")
 	cmd.Flags().StringP("input", "i", "/dev/stdin", "")
-	original, err := ioutil.ReadFile(root + "/test.yaml")
+	original, err := os.ReadFile(root + "/test.yaml")
 	if err != nil {
 		t.Fatalf("could not read file")
 	}
@@ -299,7 +298,7 @@ func TestSetJSON(t *testing.T) {
 		t.Fatalf("Threw on good nested set: %s", err)
 	}
 
-	changed, err := ioutil.ReadFile(path)
+	changed, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("could not read file")
 	}
@@ -335,7 +334,7 @@ func TestSetList(t *testing.T) {
 	cmd.Flags().Bool("json", false, "")
 	cmd.Flags().Bool("flush", false, "")
 	cmd.Flags().StringP("input", "i", "/dev/stdin", "")
-	original, err := ioutil.ReadFile(root + "/test.yaml")
+	original, err := os.ReadFile(root + "/test.yaml")
 	if err != nil {
 		t.Fatalf("could not read file")
 	}
@@ -351,7 +350,7 @@ func TestSetList(t *testing.T) {
 		t.Fatalf("Threw on good nested set: %s", err)
 	}
 
-	changed, err := ioutil.ReadFile(path)
+	changed, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("could not read file")
 	}
@@ -381,7 +380,7 @@ func TestDelete(t *testing.T) {
 	cmd.Flags().Bool("json", false, "")
 	cmd.Flags().Bool("flush", false, "")
 	cmd.Flags().StringP("input", "i", "/dev/stdin", "")
-	original, err := ioutil.ReadFile(root + "/test.yaml")
+	original, err := os.ReadFile(root + "/test.yaml")
 	if err != nil {
 		t.Fatalf("could not read file")
 	}
@@ -398,7 +397,7 @@ func TestDelete(t *testing.T) {
 		t.Fatalf("Threw on good set delete: %s", err)
 	}
 
-	changed, err := ioutil.ReadFile(path)
+	changed, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("could not read file")
 	}
@@ -427,7 +426,7 @@ func TestDeleteNested(t *testing.T) {
 	cmd.Flags().Bool("json", false, "")
 	cmd.Flags().Bool("flush", false, "")
 	cmd.Flags().StringP("input", "i", "/dev/stdin", "")
-	original, err := ioutil.ReadFile(root + "/test.yaml")
+	original, err := os.ReadFile(root + "/test.yaml")
 	if err != nil {
 		t.Fatalf("could not read file")
 	}
@@ -444,7 +443,7 @@ func TestDeleteNested(t *testing.T) {
 		t.Fatalf("Threw on good set delete nested: %s", err)
 	}
 
-	changed, err := ioutil.ReadFile(path)
+	changed, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("could not read file")
 	}

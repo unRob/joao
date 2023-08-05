@@ -41,8 +41,9 @@ func Update(vault, name string, item *op.Item) error {
 		return fmt.Errorf("could not fetch remote 1password item to compare against: %w", err)
 	}
 
-	if remote.GetValue("password") == item.GetValue("password") {
-		logrus.Debugf("remote %s\nlocal %s", remote.GetValue("password"), item.GetValue("password"))
+	remoteCS := Checksum(remote.Fields)
+	if remoteCS == item.GetValue("password") && remoteCS == remote.GetValue("password") {
+		logrus.Debugf("remote %s\nlocal %s", remoteCS, item.GetValue("password"))
 		logrus.Warnf("item %s/%s is already up to date", item.Vault.ID, item.Title)
 		return nil
 	}

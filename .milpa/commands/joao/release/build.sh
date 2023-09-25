@@ -12,7 +12,7 @@ platforms=(
   darwin/amd64
 )
 root=$(dirname "$MILPA_COMMAND_REPO")
-cd "$root" || @milpa.fail "could not cd into $MILPA_REPO_ROOT"
+cd "$root" || @milpa.fail "could not cd into $root"
 
 @milpa.log info "Starting build for version $MILPA_ARG_VERSION"
 
@@ -27,7 +27,8 @@ for platform in "${platforms[@]}"; do
 
   package="$root/dist/joao-$os-$arch.tgz"
   @milpa.log info "archiving to $package"
-  (cd "$base" && tar -czf "$MILPA_REPO_ROOT$package" joao) || @milpa.fail "Could not archive $package"
+  (cd "$base" && tar -czf "$package" joao) || @milpa.fail "Could not archive $package"
+  openssl dgst -sha256 "$package" | awk '{print $2}' > "$package.shasum"
   rm -rf "$base"
   @milpa.log success "archived $package"
 done

@@ -6,7 +6,7 @@ import (
 	"context"
 	"testing"
 
-	"git.rob.mx/nidito/joao/internal/op-client/mock"
+	"git.rob.mx/nidito/joao/internal/testdata/opconnect"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -49,7 +49,7 @@ func TestConfigDefault(t *testing.T) {
 		t.Fatal("got no response, expected something!")
 	}
 
-	mapsEqual(t, resp.Data, map[string]any{"host": mock.Host, "token": mock.Token, "vault": mock.Vaults[0].ID})
+	mapsEqual(t, resp.Data, map[string]any{"host": opconnect.Host, "token": opconnect.Token, "vault": opconnect.Vaults[0].ID})
 }
 
 func TestConfigUpdate(t *testing.T) {

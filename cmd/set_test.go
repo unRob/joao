@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	. "git.rob.mx/nidito/joao/cmd"
-	"github.com/sirupsen/logrus"
+	"git.rob.mx/nidito/joao/internal/testdata"
 	"github.com/spf13/cobra"
 )
 
@@ -24,7 +24,7 @@ func tempTestYaml(root, name string, data []byte) (string, func(), error) {
 }
 
 func TestSet(t *testing.T) {
-	root := fromProjectRoot()
+	root := testdata.TempDir(t, "test-set")
 	Set.SetBindings()
 	out := bytes.Buffer{}
 	cmd := &cobra.Command{}
@@ -38,9 +38,9 @@ func TestSet(t *testing.T) {
 	cmd.Flags().Bool("delete", false, "")
 	cmd.Flags().Bool("json", false, "")
 	cmd.Flags().Bool("flush", false, "")
-	original, err := os.ReadFile(root + "/test.yaml")
+	original, err := os.ReadFile(testdata.YAML("test"))
 	if err != nil {
-		t.Fatalf("could not read file")
+		t.Fatalf("could not read test file")
 	}
 
 	path, cleanup, err := tempTestYaml(root, "set-plain", original)
@@ -73,7 +73,7 @@ string: |-
 }
 
 func TestSetSecret(t *testing.T) {
-	root := fromProjectRoot()
+	root := testdata.TempDir(t, "test-set-secret")
 	Set.SetBindings()
 	out := bytes.Buffer{}
 	cmd := &cobra.Command{}
@@ -87,7 +87,7 @@ func TestSetSecret(t *testing.T) {
 	cmd.Flags().Bool("delete", false, "")
 	cmd.Flags().Bool("json", false, "")
 	cmd.Flags().Bool("flush", false, "")
-	original, err := os.ReadFile(root + "/test.yaml")
+	original, err := os.ReadFile(testdata.YAML("test"))
 	if err != nil {
 		t.Fatalf("could not read file")
 	}
@@ -119,7 +119,7 @@ func TestSetSecret(t *testing.T) {
 }
 
 func TestSetFromFile(t *testing.T) {
-	root := fromProjectRoot()
+	root := testdata.TempDir(t, "test-set-from-file")
 	Set.SetBindings()
 	out := bytes.Buffer{}
 	cmd := &cobra.Command{}
@@ -130,7 +130,7 @@ func TestSetFromFile(t *testing.T) {
 	cmd.Flags().Bool("delete", false, "")
 	cmd.Flags().Bool("json", false, "")
 	cmd.Flags().Bool("flush", false, "")
-	original, err := os.ReadFile(root + "/test.yaml")
+	original, err := os.ReadFile(testdata.YAML("test"))
 	if err != nil {
 		t.Fatalf("could not read file")
 	}
@@ -168,7 +168,7 @@ func TestSetFromFile(t *testing.T) {
 }
 
 func TestSetNew(t *testing.T) {
-	root := fromProjectRoot()
+	root := testdata.TempDir(t, "test-set-new")
 	Set.SetBindings()
 	out := bytes.Buffer{}
 	cmd := &cobra.Command{}
@@ -183,7 +183,7 @@ func TestSetNew(t *testing.T) {
 	cmd.Flags().Bool("json", false, "")
 	cmd.Flags().Bool("flush", false, "")
 	cmd.Flags().StringP("input", "i", "/dev/stdin", "")
-	original, err := os.ReadFile(root + "/test.yaml")
+	original, err := os.ReadFile(testdata.YAML("test"))
 	if err != nil {
 		t.Fatalf("could not read file")
 	}
@@ -219,7 +219,7 @@ quarteto: |-
 }
 
 func TestSetNested(t *testing.T) {
-	root := fromProjectRoot()
+	root := testdata.TempDir(t, "test-set-nested")
 	Set.SetBindings()
 	out := bytes.Buffer{}
 	cmd := &cobra.Command{}
@@ -234,7 +234,7 @@ func TestSetNested(t *testing.T) {
 	cmd.Flags().Bool("json", false, "")
 	cmd.Flags().Bool("flush", false, "")
 	cmd.Flags().StringP("input", "i", "/dev/stdin", "")
-	original, err := os.ReadFile(root + "/test.yaml")
+	original, err := os.ReadFile(testdata.YAML("test"))
 	if err != nil {
 		t.Fatalf("could not read file")
 	}
@@ -267,7 +267,7 @@ func TestSetNested(t *testing.T) {
 }
 
 func TestSetJSON(t *testing.T) {
-	root := fromProjectRoot()
+	root := testdata.TempDir(t, "test-set-json")
 	Set.SetBindings()
 	out := bytes.Buffer{}
 	cmd := &cobra.Command{}
@@ -282,7 +282,7 @@ func TestSetJSON(t *testing.T) {
 	cmd.Flags().Bool("json", true, "")
 	cmd.Flags().Bool("flush", false, "")
 	cmd.Flags().StringP("input", "i", "/dev/stdin", "")
-	original, err := os.ReadFile(root + "/test.yaml")
+	original, err := os.ReadFile(testdata.YAML("test"))
 	if err != nil {
 		t.Fatalf("could not read file")
 	}
@@ -317,9 +317,7 @@ na-beira-da-lagoa:
 }
 
 func TestSetList(t *testing.T) {
-	logrus.SetLevel(logrus.DebugLevel)
-
-	root := fromProjectRoot()
+	root := testdata.TempDir(t, "test-set-list")
 	Set.SetBindings()
 	out := bytes.Buffer{}
 	cmd := &cobra.Command{}
@@ -334,7 +332,7 @@ func TestSetList(t *testing.T) {
 	cmd.Flags().Bool("json", false, "")
 	cmd.Flags().Bool("flush", false, "")
 	cmd.Flags().StringP("input", "i", "/dev/stdin", "")
-	original, err := os.ReadFile(root + "/test.yaml")
+	original, err := os.ReadFile(testdata.YAML("test"))
 	if err != nil {
 		t.Fatalf("could not read file")
 	}
@@ -368,7 +366,7 @@ asdf:
 }
 
 func TestDelete(t *testing.T) {
-	root := fromProjectRoot()
+	root := testdata.TempDir(t, "test-delete")
 	Set.SetBindings()
 	out := bytes.Buffer{}
 	cmd := &cobra.Command{}
@@ -380,7 +378,7 @@ func TestDelete(t *testing.T) {
 	cmd.Flags().Bool("json", false, "")
 	cmd.Flags().Bool("flush", false, "")
 	cmd.Flags().StringP("input", "i", "/dev/stdin", "")
-	original, err := os.ReadFile(root + "/test.yaml")
+	original, err := os.ReadFile(testdata.YAML("test"))
 	if err != nil {
 		t.Fatalf("could not read file")
 	}
@@ -414,7 +412,7 @@ string: pato
 }
 
 func TestDeleteNested(t *testing.T) {
-	root := fromProjectRoot()
+	root := testdata.TempDir(t, "test-delete-nested")
 	Set.SetBindings()
 	out := bytes.Buffer{}
 	cmd := &cobra.Command{}
@@ -426,7 +424,7 @@ func TestDeleteNested(t *testing.T) {
 	cmd.Flags().Bool("json", false, "")
 	cmd.Flags().Bool("flush", false, "")
 	cmd.Flags().StringP("input", "i", "/dev/stdin", "")
-	original, err := os.ReadFile(root + "/test.yaml")
+	original, err := os.ReadFile(testdata.YAML("test"))
 	if err != nil {
 		t.Fatalf("could not read file")
 	}

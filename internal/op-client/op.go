@@ -42,6 +42,9 @@ func Update(vault, name string, item *op.Item) error {
 	}
 
 	remoteCS := Checksum(remote.Fields)
+	// we're checking the checksum we just calculated matches the stored on remote
+	// and that remoteCS matching the current item's stored password
+	// nolint:gocritic
 	if remoteCS == item.GetValue("password") && remoteCS == remote.GetValue("password") {
 		logrus.Debugf("remote %s\nlocal %s", remoteCS, item.GetValue("password"))
 		logrus.Warnf("item %s/%s is already up to date", item.Vault.ID, item.Title)

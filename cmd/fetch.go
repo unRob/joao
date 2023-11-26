@@ -39,7 +39,9 @@ var Fetch = &command.Command{
 
 			if dryRun := cmd.Options["dry-run"].ToValue().(bool); dryRun {
 				logrus.Warnf("dry-run: comparing %s to %s", local.OPURL(), path)
-				if err := local.DiffRemote(path, false, true, cmd.Cobra.OutOrStdout(), cmd.Cobra.OutOrStderr()); err != nil {
+				stdout := cmd.Cobra.OutOrStdout()
+				stderr := cmd.Cobra.OutOrStderr()
+				if err := local.DiffRemote(path, false, true, stdout, stderr); err != nil {
 					return err
 				}
 				logrus.Warnf("dry-run: did not update %s", path)

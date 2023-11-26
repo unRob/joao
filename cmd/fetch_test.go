@@ -8,23 +8,22 @@ import (
 	"testing"
 
 	. "git.rob.mx/nidito/joao/cmd"
-	"git.rob.mx/nidito/joao/internal/op-client/mock"
+	"git.rob.mx/nidito/joao/internal/testdata"
+	"git.rob.mx/nidito/joao/internal/testdata/opconnect"
 	"github.com/1Password/connect-sdk-go/onepassword"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
 func TestFetch(t *testing.T) {
-	mockOPConnect(t)
-	f := testConfig.Fields
-	s := testConfig.Sections
-	defer func() { testConfig.Fields = f; testConfig.Sections = s }()
-
-	testConfig.Sections = append(testConfig.Sections,
+	testdata.EnableDebugLogging()
+	testdata.MockOPConnect(t)
+	root := testdata.FromProjectRoot()
+	cfg := testdata.NewTestConfig("some:test")
+	cfg.Sections = append(cfg.Sections,
 		&onepassword.ItemSection{ID: "o", Label: "o"},
 		&onepassword.ItemSection{ID: "e-fez-tambem", Label: "e-fez-tambem"},
 	)
-	testConfig.Fields = append(testConfig.Fields,
+	cfg.Fields = append(cfg.Fields,
 		&onepassword.ItemField{
 			ID:      "o.ganso.gosto",
 			Section: &onepassword.ItemSection{ID: "o", Label: "o"},
@@ -53,23 +52,23 @@ func TestFetch(t *testing.T) {
 			Label:   "2",
 			Value:   "quém!",
 		})
-	mock.Update(testConfig)
-	root := fromProjectRoot()
-	out := bytes.Buffer{}
-	Fetch.SetBindings()
+
+	opconnect.Add(cfg)
+	out := &bytes.Buffer{}
 	cmd := &cobra.Command{}
 	cmd.Flags().Bool("dry-run", true, "")
-	cmd.SetOut(&out)
-	cmd.SetErr(&out)
+	cmd.SetOut(out)
+	cmd.SetErr(out)
+
+	Fetch.SetBindings()
 	Fetch.Cobra = cmd
-	logrus.SetLevel(logrus.DebugLevel)
-	err := Fetch.Run(cmd, []string{root + "/test.yaml"})
+	err := Fetch.Run(cmd, []string{testdata.YAML("test")})
 
 	if err != nil {
 		t.Fatalf("could not get: %s", err)
 	}
 
-	expected := `--- /Users/roberto/src/joao/test.yaml
+	expected := `--- ` + root + `/testdata/test.yaml
 +++ op://example/some:test
 @@ -1,4 +1,8 @@
  bool: false

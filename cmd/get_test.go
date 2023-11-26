@@ -6,247 +6,24 @@ import (
 	"bytes"
 	"encoding/json"
 	"os"
-	"path"
-	"runtime"
 	"strings"
 	"testing"
 
 	. "git.rob.mx/nidito/joao/cmd"
-	opclient "git.rob.mx/nidito/joao/internal/op-client"
-	"git.rob.mx/nidito/joao/internal/op-client/mock"
-	"github.com/1Password/connect-sdk-go/connect"
-	"github.com/1Password/connect-sdk-go/onepassword"
+	"git.rob.mx/nidito/joao/internal/testdata"
+	"git.rob.mx/nidito/joao/internal/testdata/opconnect"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
-var testConfig = &onepassword.Item{
-	Title:    "some:test",
-	Vault:    onepassword.ItemVault{ID: "example"},
-	Category: "PASSWORD",
-	Sections: []*onepassword.ItemSection{
-		{ID: "~annotations", Label: "~annotations"},
-		{ID: "nested", Label: "nested"},
-		{ID: "list", Label: "list"},
-	},
-	Fields: []*onepassword.ItemField{
-		{
-			ID:      "password",
-			Type:    "CONCEALED",
-			Purpose: "PASSWORD",
-			Label:   "password",
-			Value:   "8b23de7705b79b73d9f75b120651bc162859e45a732b764362feaefc882eab5d",
-		},
-		{
-			ID:      "notesPlain",
-			Type:    "STRING",
-			Purpose: "NOTES",
-			Label:   "notesPlain",
-			Value:   "flushed by joao",
-		},
-		{
-			ID:      "~annotations.int",
-			Section: &onepassword.ItemSection{ID: "~annotations", Label: "~annotations"},
-			Type:    "STRING",
-			Label:   "int",
-			Value:   "int",
-		},
-		{
-			ID:    "int",
-			Type:  "STRING",
-			Label: "int",
-			Value: "1",
-		},
-		{
-			ID:    "string",
-			Type:  "STRING",
-			Label: "string",
-			Value: "pato",
-		},
-		{
-			ID:      "~annotations.bool",
-			Section: &onepassword.ItemSection{ID: "~annotations", Label: "~annotations"},
-			Type:    "STRING",
-			Label:   "bool",
-			Value:   "bool",
-		},
-		{
-			ID:    "bool",
-			Type:  "STRING",
-			Label: "bool",
-			Value: "false",
-		},
-		{
-			ID:      "~annotations.secret",
-			Section: &onepassword.ItemSection{ID: "~annotations", Label: "~annotations"},
-			Type:    "STRING",
-			Label:   "secret",
-			Value:   "secret",
-		},
-		{
-			ID:    "secret",
-			Type:  "CONCEALED",
-			Label: "secret",
-			Value: "very secret",
-		},
-		{
-			ID:      "~annotations.nested.int",
-			Section: &onepassword.ItemSection{ID: "~annotations", Label: "~annotations"},
-			Type:    "STRING",
-			Label:   "nested.int",
-			Value:   "int",
-		},
-		{
-			ID:      "nested.int",
-			Section: &onepassword.ItemSection{ID: "nested", Label: "nested"},
-			Type:    "STRING",
-			Label:   "int",
-			Value:   "1",
-		},
-		{
-			ID:      "~annotations.nested.bool",
-			Section: &onepassword.ItemSection{ID: "~annotations", Label: "~annotations"},
-			Type:    "STRING",
-			Label:   "nested.bool",
-			Value:   "bool",
-		},
-		{
-			ID:      "nested.bool",
-			Section: &onepassword.ItemSection{ID: "nested", Label: "nested"},
-			Type:    "STRING",
-			Label:   "bool",
-			Value:   "true",
-		},
-		{
-			ID:      "~annotations.nested.list.0",
-			Section: &onepassword.ItemSection{ID: "~annotations", Label: "~annotations"},
-			Type:    "STRING",
-			Label:   "nested.list.0",
-			Value:   "int",
-		},
-		{
-			ID:      "nested.list.0",
-			Section: &onepassword.ItemSection{ID: "nested", Label: "nested"},
-			Type:    "STRING",
-			Label:   "list.0",
-			Value:   "1",
-		},
-		{
-			ID:      "~annotations.nested.list.1",
-			Section: &onepassword.ItemSection{ID: "~annotations", Label: "~annotations"},
-			Type:    "STRING",
-			Label:   "nested.list.1",
-			Value:   "int",
-		},
-		{
-			ID:      "nested.list.1",
-			Section: &onepassword.ItemSection{ID: "nested", Label: "nested"},
-			Type:    "STRING",
-			Label:   "list.1",
-			Value:   "2",
-		},
-		{
-			ID:      "~annotations.nested.list.2",
-			Section: &onepassword.ItemSection{ID: "~annotations", Label: "~annotations"},
-			Type:    "STRING",
-			Label:   "nested.list.2",
-			Value:   "int",
-		},
-		{
-			ID:      "nested.list.2",
-			Section: &onepassword.ItemSection{ID: "nested", Label: "nested"},
-			Type:    "STRING",
-			Label:   "list.2",
-			Value:   "3",
-		},
-		{
-			ID:      "~annotations.nested.secret",
-			Section: &onepassword.ItemSection{ID: "~annotations", Label: "~annotations"},
-			Type:    "STRING",
-			Label:   "nested.secret",
-			Value:   "secret",
-		},
-		{
-			ID:      "nested.secret",
-			Section: &onepassword.ItemSection{ID: "nested", Label: "nested"},
-			Type:    "CONCEALED",
-			Label:   "secret",
-			Value:   "very secret",
-		},
-		{
-			ID:      "~annotations.nested.second_secret",
-			Section: &onepassword.ItemSection{ID: "~annotations", Label: "~annotations"},
-			Type:    "STRING",
-			Label:   "nested.second_secret",
-			Value:   "secret",
-		},
-		{
-			ID:      "nested.second_secret",
-			Section: &onepassword.ItemSection{ID: "nested", Label: "nested"},
-			Type:    "CONCEALED",
-			Label:   "second_secret",
-			Value:   "very secret",
-		},
-		{
-			ID:      "nested.string",
-			Section: &onepassword.ItemSection{ID: "nested", Label: "nested"},
-			Type:    "STRING",
-			Label:   "string",
-			Value:   "quem",
-		},
-		{
-			ID:      "list.0",
-			Section: &onepassword.ItemSection{ID: "list", Label: "list"},
-			Type:    "STRING",
-			Label:   "0",
-			Value:   "one",
-		},
-		{
-			ID:      "list.1",
-			Section: &onepassword.ItemSection{ID: "list", Label: "list"},
-			Type:    "STRING",
-			Label:   "1",
-			Value:   "two",
-		},
-		{
-			ID:      "list.2",
-			Section: &onepassword.ItemSection{ID: "list", Label: "list"},
-			Type:    "STRING",
-			Label:   "2",
-			Value:   "three",
-		},
-	},
-}
-
-func mockOPConnect(t *testing.T) {
-	t.Helper()
-	opclient.ConnectClientFactory = func(host, token, userAgent string) connect.Client {
-		return &mock.Client{}
-	}
-	client := opclient.NewConnect("", "")
-	opclient.Use(client)
-	mock.Add(testConfig)
-}
-
-func fromProjectRoot() string {
-	_, filename, _, _ := runtime.Caller(0)
-	dir := path.Join(path.Dir(filename), "../")
-	if err := os.Chdir(dir); err != nil {
-		panic(err)
-	}
-	wd, _ := os.Getwd()
-	return wd
-}
-
 func TestGetBadYAML(t *testing.T) {
-	root := fromProjectRoot()
 	Get.SetBindings()
 	out := bytes.Buffer{}
 	cmd := &cobra.Command{}
 	cmd.SetOut(&out)
 	cmd.SetErr(&out)
 	Get.Cobra = cmd
-	err := Get.Run(cmd, []string{root + "/bad-test.yaml", "."})
+	err := Get.Run(cmd, []string{testdata.YAML("bad-test"), "."})
 	if err == nil {
 		t.Fatalf("Did not throw on bad path: %s", out.String())
 	}
@@ -258,7 +35,7 @@ func TestGetBadYAML(t *testing.T) {
 }
 
 func TestGetBadPath(t *testing.T) {
-	root := fromProjectRoot()
+	root := testdata.FromProjectRoot()
 	Get.SetBindings()
 	out := bytes.Buffer{}
 	cmd := &cobra.Command{}
@@ -278,7 +55,6 @@ func TestGetBadPath(t *testing.T) {
 }
 
 func TestGetNormal(t *testing.T) {
-	root := fromProjectRoot()
 	out := bytes.Buffer{}
 	Get.SetBindings()
 	cmd := &cobra.Command{}
@@ -286,13 +62,13 @@ func TestGetNormal(t *testing.T) {
 	cmd.SetOut(&out)
 	cmd.SetErr(&out)
 	Get.Cobra = cmd
-	err := Get.Run(cmd, []string{root + "/test.yaml", "."})
+	err := Get.Run(cmd, []string{testdata.YAML("test"), "."})
 
 	if err != nil {
 		t.Fatalf("could not get: %s", err)
 	}
 
-	expected, err := os.ReadFile(root + "/test.yaml")
+	expected, err := os.ReadFile(testdata.YAML("test"))
 	if err != nil {
 		t.Fatalf("could not read file: %s", err)
 	}
@@ -303,7 +79,6 @@ func TestGetNormal(t *testing.T) {
 }
 
 func TestGetRedacted(t *testing.T) {
-	root := fromProjectRoot()
 	out := bytes.Buffer{}
 	Get.SetBindings()
 	cmd := &cobra.Command{}
@@ -311,14 +86,14 @@ func TestGetRedacted(t *testing.T) {
 	cmd.SetOut(&out)
 	cmd.SetErr(&out)
 	Get.Cobra = cmd
-	os.Args = []string{root + "/test.yaml", ".", "--redacted"}
-	err := Get.Run(cmd, []string{root + "/test.yaml", "."})
+	os.Args = []string{testdata.YAML("test"), ".", "--redacted"}
+	err := Get.Run(cmd, []string{testdata.YAML("test"), "."})
 
 	if err != nil {
 		t.Fatalf("could not get: %s", err)
 	}
 
-	expected, err := os.ReadFile(root + "/test.yaml")
+	expected, err := os.ReadFile(testdata.YAML("test"))
 	if err != nil {
 		t.Fatalf("could not read file: %s", err)
 	}
@@ -329,7 +104,6 @@ func TestGetRedacted(t *testing.T) {
 }
 
 func TestGetPath(t *testing.T) {
-	root := fromProjectRoot()
 	out := bytes.Buffer{}
 	Get.SetBindings()
 	cmd := &cobra.Command{}
@@ -338,7 +112,7 @@ func TestGetPath(t *testing.T) {
 	cmd.SetOut(&out)
 	cmd.SetErr(&out)
 	Get.Cobra = cmd
-	os.Args = []string{root + "/test.yaml", "nested.secret"}
+	os.Args = []string{testdata.YAML("test"), "nested.secret"}
 	err := Get.Run(cmd, os.Args)
 
 	if err != nil {
@@ -353,8 +127,8 @@ func TestGetPath(t *testing.T) {
 	out = bytes.Buffer{}
 	cmd.SetOut(&out)
 	cmd.SetErr(&out)
-	os.Args = []string{root + "/test.yaml", "nested", "--output", "diff-yaml"}
-	err = Get.Run(cmd, []string{root + "/test.yaml", "nested"})
+	os.Args = []string{testdata.YAML("test"), "nested", "--output", "diff-yaml"}
+	err = Get.Run(cmd, []string{testdata.YAML("test"), "nested"})
 
 	if err != nil {
 		t.Fatalf("could not get: %s", err)
@@ -376,7 +150,6 @@ string: quem`
 }
 
 func TestGetPathCollection(t *testing.T) {
-	root := fromProjectRoot()
 	out := bytes.Buffer{}
 	Get.SetBindings()
 	cmd := &cobra.Command{}
@@ -385,8 +158,8 @@ func TestGetPathCollection(t *testing.T) {
 	cmd.SetOut(&out)
 	cmd.SetErr(&out)
 	Get.Cobra = cmd
-	os.Args = []string{root + "/test.yaml", "nested", "--output", "yaml"}
-	err := Get.Run(cmd, []string{root + "/test.yaml", "nested"})
+	os.Args = []string{testdata.YAML("test"), "nested", "--output", "yaml"}
+	err := Get.Run(cmd, []string{testdata.YAML("test"), "nested"})
 
 	if err != nil {
 		t.Fatalf("could not get: %s", err)
@@ -408,7 +181,6 @@ string: quem`
 }
 
 func TestGetDiff(t *testing.T) {
-	root := fromProjectRoot()
 	out := bytes.Buffer{}
 	Get.SetBindings()
 	cmd := &cobra.Command{}
@@ -417,8 +189,8 @@ func TestGetDiff(t *testing.T) {
 	cmd.SetOut(&out)
 	cmd.SetErr(&out)
 	Get.Cobra = cmd
-	os.Args = []string{root + "/test.yaml", ".", "--output", "diff-yaml"}
-	err := Get.Run(cmd, []string{root + "/test.yaml", "."})
+	os.Args = []string{testdata.YAML("test"), ".", "--output", "diff-yaml"}
+	err := Get.Run(cmd, []string{testdata.YAML("test"), "."})
 
 	if err != nil {
 		t.Fatalf("could not get: %s", err)
@@ -452,7 +224,6 @@ string: pato`
 }
 
 func TestGetJSON(t *testing.T) {
-	root := fromProjectRoot()
 	out := bytes.Buffer{}
 	Get.SetBindings()
 	cmd := &cobra.Command{}
@@ -461,8 +232,8 @@ func TestGetJSON(t *testing.T) {
 	cmd.SetOut(&out)
 	cmd.SetErr(&out)
 	Get.Cobra = cmd
-	os.Args = []string{root + "/test.yaml", ".", "--output", "json"}
-	err := Get.Run(cmd, []string{root + "/test.yaml", "."})
+	os.Args = []string{testdata.YAML("test"), ".", "--output", "json"}
+	err := Get.Run(cmd, []string{testdata.YAML("test"), "."})
 
 	if err != nil {
 		t.Fatalf("could not get: %s", err)
@@ -476,7 +247,6 @@ func TestGetJSON(t *testing.T) {
 }
 
 func TestGetDeepJSON(t *testing.T) {
-	root := fromProjectRoot()
 	out := bytes.Buffer{}
 	Get.SetBindings()
 	cmd := &cobra.Command{}
@@ -485,8 +255,9 @@ func TestGetDeepJSON(t *testing.T) {
 	cmd.SetOut(&out)
 	cmd.SetErr(&out)
 	Get.Cobra = cmd
-	os.Args = []string{root + "/deeply-nested.test.yaml", ".", "--output", "json"}
-	err := Get.Run(cmd, []string{root + "/deeply-nested.test.yaml", "."})
+	file := testdata.YAML("deeply-nested.test")
+	os.Args = []string{file, ".", "--output", "json"}
+	err := Get.Run(cmd, []string{file, "."})
 
 	if err != nil {
 		t.Fatalf("could not get: %s", err)
@@ -500,7 +271,6 @@ func TestGetDeepJSON(t *testing.T) {
 }
 
 func TestGetJSONPathScalar(t *testing.T) {
-	root := fromProjectRoot()
 	out := bytes.Buffer{}
 	Get.SetBindings()
 	cmd := &cobra.Command{}
@@ -509,8 +279,9 @@ func TestGetJSONPathScalar(t *testing.T) {
 	cmd.SetOut(&out)
 	cmd.SetErr(&out)
 	Get.Cobra = cmd
-	os.Args = []string{root + "/test.yaml", "nested.secret", "--output", "json"}
-	err := Get.Run(cmd, []string{root + "/test.yaml", "nested.secret"})
+	file := testdata.YAML("test")
+	os.Args = []string{file, "nested.secret", "--output", "json"}
+	err := Get.Run(cmd, []string{file, "nested.secret"})
 
 	if err != nil {
 		t.Fatalf("could not get: %s", err)
@@ -524,7 +295,6 @@ func TestGetJSONPathScalar(t *testing.T) {
 }
 
 func TestGetJSONPathCollection(t *testing.T) {
-	root := fromProjectRoot()
 	out := bytes.Buffer{}
 	Get.SetBindings()
 	cmd := &cobra.Command{}
@@ -533,8 +303,9 @@ func TestGetJSONPathCollection(t *testing.T) {
 	cmd.SetOut(&out)
 	cmd.SetErr(&out)
 	Get.Cobra = cmd
-	os.Args = []string{root + "/test.yaml", "nested", "--output", "json"}
-	err := Get.Run(cmd, []string{root + "/test.yaml", "nested"})
+	file := testdata.YAML("test")
+	os.Args = []string{file, "nested", "--output", "json"}
+	err := Get.Run(cmd, []string{file, "nested"})
 
 	if err != nil {
 		t.Fatalf("could not get: %s", err)
@@ -548,7 +319,6 @@ func TestGetJSONPathCollection(t *testing.T) {
 }
 
 func TestGetJSONRedacted(t *testing.T) {
-	root := fromProjectRoot()
 	out := bytes.Buffer{}
 	Get.SetBindings()
 	cmd := &cobra.Command{}
@@ -557,8 +327,9 @@ func TestGetJSONRedacted(t *testing.T) {
 	cmd.SetOut(&out)
 	cmd.SetErr(&out)
 	Get.Cobra = cmd
-	os.Args = []string{root + "/test.yaml", ".", "--output", "json", "--redacted"}
-	err := Get.Run(cmd, []string{root + "/test.yaml", "."})
+	file := testdata.YAML("test")
+	os.Args = []string{file, ".", "--output", "json", "--redacted"}
+	err := Get.Run(cmd, []string{file, "."})
 
 	if err != nil {
 		t.Fatalf("could not get: %s", err)
@@ -572,7 +343,6 @@ func TestGetJSONRedacted(t *testing.T) {
 }
 
 func TestGetJSONOP(t *testing.T) {
-	root := fromProjectRoot()
 	out := bytes.Buffer{}
 	Get.SetBindings()
 	cmd := &cobra.Command{}
@@ -580,17 +350,18 @@ func TestGetJSONOP(t *testing.T) {
 	cmd.SetOut(&out)
 	cmd.SetErr(&out)
 	Get.Cobra = cmd
-	os.Args = []string{root + "/test.yaml", ".", "--output", "op"}
-	err := Get.Run(cmd, []string{root + "/test.yaml", "."})
+	os.Args = []string{testdata.YAML("test"), ".", "--output", "op"}
+	err := Get.Run(cmd, []string{testdata.YAML("test"), "."})
 
 	if err != nil {
 		t.Fatalf("could not get: %s", err)
 	}
 
-	id := testConfig.ID
-	testConfig.ID = ""
-	defer func() { testConfig.ID = id }()
-	expected, err := json.Marshal(testConfig)
+	cfg := testdata.NewTestConfig("some:test")
+	id := cfg.ID
+	cfg.ID = ""
+	defer func() { cfg.ID = id }()
+	expected, err := json.Marshal(cfg)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -601,8 +372,8 @@ func TestGetJSONOP(t *testing.T) {
 }
 
 func TestGetRemote(t *testing.T) {
-	mockOPConnect(t)
-	root := fromProjectRoot()
+	testdata.MockOPConnect(t)
+	opconnect.Add(testdata.NewTestConfig("some:test"))
 	out := bytes.Buffer{}
 	Get.SetBindings()
 	cmd := &cobra.Command{}
@@ -613,8 +384,8 @@ func TestGetRemote(t *testing.T) {
 	cmd.SetErr(&out)
 	Get.Cobra = cmd
 	logrus.SetLevel(logrus.DebugLevel)
-	os.Args = []string{root + "/test.yaml", "."}
-	err := Get.Run(cmd, []string{root + "/test.yaml", "."})
+	os.Args = []string{testdata.YAML("test"), "."}
+	err := Get.Run(cmd, []string{testdata.YAML("test"), "."})
 
 	if err != nil {
 		t.Fatalf("could not get: %s", err)

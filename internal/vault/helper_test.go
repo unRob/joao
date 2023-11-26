@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"git.rob.mx/nidito/joao/internal/op-client/mock"
+	"git.rob.mx/nidito/joao/internal/testdata/opconnect"
 	"git.rob.mx/nidito/joao/internal/vault"
 	"git.rob.mx/nidito/joao/internal/vault/middleware"
 	"github.com/1Password/connect-sdk-go/connect"
@@ -44,7 +44,7 @@ func getBackend(tb testing.TB) (logical.Backend, logical.Storage) {
 	cfg := testConfig()
 	ctx := context.Background()
 
-	data, err := json.Marshal(map[string]string{"host": mock.Host, "token": mock.Token, "vault": mock.Vaults[0].ID})
+	data, err := json.Marshal(map[string]string{"host": opconnect.Host, "token": opconnect.Token, "vault": opconnect.Vaults[0].ID})
 	if err != nil {
 		tb.Fatalf("Could not serialize config for client: %s", err)
 	}
@@ -77,6 +77,6 @@ func getUnconfiguredBackend(tb testing.TB) (logical.Backend, logical.Storage) {
 
 func setOnePassswordConnectMocks() {
 	vault.ConnectClientFactory = func(s logical.Storage) (connect.Client, error) {
-		return &mock.Client{}, nil
+		return &opconnect.Client{}, nil
 	}
 }

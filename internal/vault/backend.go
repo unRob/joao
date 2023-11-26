@@ -30,7 +30,7 @@ var ConnectClientFactory func(s logical.Storage) (connect.Client, error) = onePa
 
 // Factory returns a new backend as logical.Backend.
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
-	b := Backend()
+	b := newBackend()
 	if err := b.Setup(ctx, conf); err != nil {
 		return nil, err
 	}
@@ -58,7 +58,7 @@ func optionalVaultPattern(suffix string) string {
 	return fmt.Sprintf("(?P<vault>([\\w:]+)%s)?", suffix)
 }
 
-func Backend() *backend {
+func newBackend() *backend {
 	var b = &backend{
 		configCache: ttlcache.New(
 			ttlcache.WithTTL[string, string](5 * time.Minute),

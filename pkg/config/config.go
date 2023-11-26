@@ -5,7 +5,6 @@ package config
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"strings"
@@ -236,7 +235,7 @@ func (cfg *Config) DiffRemote(path string, redacted, asFetch bool, stdout, stder
 }
 
 func tempfile(data []byte) (string, func(), error) {
-	f, err := ioutil.TempFile("", "joao-diff")
+	f, err := os.CreateTemp("", "joao-diff")
 	if err != nil {
 		return "", nil, err
 	}

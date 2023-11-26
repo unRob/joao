@@ -20,8 +20,14 @@ func Checksum(fields []*op.ItemField) string {
 			continue
 		}
 		label := field.Label
-		if field.Section != nil && field.Section.ID != "" {
-			label = field.Section.ID + "." + label
+		if field.Section != nil {
+			sectionID := field.Section.Label
+			if sectionID == "" {
+				sectionID = field.Section.ID
+			}
+			if sectionID != "" {
+				label = sectionID + "." + label
+			}
 		}
 		df = append(df, label+field.Value)
 	}

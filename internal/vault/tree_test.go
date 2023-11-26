@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"testing"
 
-	"git.rob.mx/nidito/joao/internal/op-client/mock"
+	"git.rob.mx/nidito/joao/internal/testdata/opconnect"
 	"github.com/1Password/connect-sdk-go/onepassword"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -20,8 +20,8 @@ func getTestBackendWithConfig(t *testing.T) (logical.Backend, logical.Storage) {
 
 func TestReadEntry(t *testing.T) {
 	b, reqStorage := getTestBackendWithConfig(t)
-	mock.Clear()
-	item := mock.Add(generateConfigItem("service:test"))
+	opconnect.Clear()
+	item := opconnect.Add(generateConfigItem("service:test"))
 	expected := map[string]any{
 		"boolean": false,
 		"integer": 42,
@@ -89,8 +89,8 @@ func TestReadEntry(t *testing.T) {
 
 func TestListEntries(t *testing.T) {
 	b, reqStorage := getTestBackendWithConfig(t)
-	mock.Clear()
-	item := mock.Add(generateConfigItem("service:test"))
+	opconnect.Clear()
+	item := opconnect.Add(generateConfigItem("service:test"))
 
 	expected := map[string]any{
 		"keys": []string{
@@ -174,7 +174,7 @@ func generateConfigItem(title string) *onepassword.Item {
 		Category: "password",
 		Title:    title,
 		Vault: onepassword.ItemVault{
-			ID: mock.Vaults[0].ID,
+			ID: opconnect.Vaults[0].ID,
 		},
 		Fields: []*onepassword.ItemField{
 			{

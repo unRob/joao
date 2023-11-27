@@ -33,11 +33,12 @@ for platform in "${platforms[@]}"; do
   @milpa.log success "archived $package"
 done
 
-echo -n "$MILPA_ARG_VERSION" > "$root/dist/latest-version"
+echo -n "$MILPA_ARG_VERSION" > "$root/latest-version"
 
 @milpa.log info "uploading to cdn"
+rclone copy --s3-acl=public-read "$root/latest-version" "cdn:cdn.rob.mx/tools/joao"
 rclone sync --s3-acl=public-read \
   "$root/dist/" \
   "cdn:cdn.rob.mx/tools/joao/$MILPA_ARG_VERSION/" || @milpa.fail "could not upload to CDN"
 @milpa.log complete "release for $MILPA_ARG_VERSION available at CDN"
-rm -rf dist
+rm -rf "$root/dist" "$root/latest-version"

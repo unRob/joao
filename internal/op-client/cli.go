@@ -31,6 +31,10 @@ func DefaultExec(program string, args []string, stdin *bytes.Buffer) (stdout byt
 	cmd.Stdout = &stdout
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
+	if stdin != nil {
+		cmd.Stdin = stdin
+	}
+
 	if err = cmd.Run(); err != nil {
 		return stderr, fmt.Errorf("op exited with %s:\n%s", err, stderr.Bytes())
 	}
@@ -53,11 +57,12 @@ func invoke(dryRun bool, vault string, stdin *bytes.Buffer, args ...string) (byt
 	argString := strings.Join(args, " ")
 	if dryRun {
 		logrus.Warnf("dry-run: Would have invoked `op %s`", argString)
-		logrus.Warnf("dry-run: stdin `%s`", stdin)
+		logrus.Tracef("dry-run: stdin `%s`", stdin)
 		return bytes.Buffer{}, nil
 	}
 
 	logrus.Debugf("running `%s %s`", Path, argString)
+	logrus.Tracef("stdin `%s`", stdin)
 	return Exec(Path, args, stdin)
 }
 
@@ -114,6 +119,8 @@ func (b *CLI) Update(item *op.Item, remote *op.Item) error {
 }
 
 func (b *CLI) UpdateModern(updated *op.Item, original *op.Item) error {
+	updated.ID = original.ID
+	updated.Vault = original.Vault
 	itemJSON, err := json.Marshal(updated)
 	if err != nil {
 		return fmt.Errorf("could not serialize op item into json: %w", err)

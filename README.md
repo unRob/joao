@@ -1,6 +1,6 @@
 # `joao`
 
-A very wip configuration manager. Keeps config entries encoded as YAML in the filesystem, backs it up to 1Password, and syncs scrubbed copies to git. robots consume entries via 1Password Connect + Vault.
+A very WIP configuration manager. Keeps config entries encoded as YAML in the filesystem, backs it up to 1Password, and syncs scrubbed copies to git. robots consume entries via 1Password Connect + Vault.
 
 ## Usage
 
@@ -48,7 +48,7 @@ And thus, I set to write me, yet again, some configuration toolchain that:
 - Allows the _structure_ of config trees to live happily **in the filesystem**: my home+cloud DC uses a lot of configuration spread over multiple files, one-off services don't really need the whole folder structure—I want a single tool to handle both.
 - Prevents _secrets_ from ending up in **remote repositories**: I really dig `git-crypt`'s filters, not quite sure about how to safely operate them yet...
 - Makes it **easy to edit** entries locally, as well as on the go: Easy for me to R/W, so YAML files, and 1Password's tools are pretty great for quick edits remotely.
-- Is capable of bootstrapping other secret mangement processes: A single binary can talk to `op`'s CLI (hello, touch ID on macos!), to a 1password-connect server, and to vault as a plugin.
+- Is capable of bootstrapping other secret management processes: A single binary can talk to `op`'s CLI (hello, touchID on MacOS!), to a 1password-connect server, and to vault as a plugin.
 
 For a deeper dive on these points above, check out my [docs/letter-to-secret-santa.md](docs/letter-to-secret-santa.md).
 
@@ -65,7 +65,7 @@ The ideal workflow is:
 1. configs are written to disk, temporarily
 2. `joao flush --redact`es them to 1password, and removes secrets from disk
 3. configuration values, secret or not, are read from:
-  - `joao get` as needed by local processes. Mostly thinking of the human in the loop here, where `op` and suitable auth (i.e. touchid) workflows are available.
+  - `joao get` as needed by local processes. Mostly thinking of the human in the loop here, where `op` and suitable auth (i.e. touchID) workflows are available.
   - from 1Password Connect, for when vault is not configured or available (think during provisioning)
   - from Hashicorp Vault, for any automated process, after provisioning is complete.
 
@@ -78,7 +78,7 @@ The ideal workflow is:
 
 ### Repo mode
 
-Basically, configs are kept in a directory and their relative path maps to their 1Password item name. A `.joao.yaml` file must exist at the root configuration directory, specifying the 1Password vault to use, and optionally a prefix to prepend ot every item name
+Basically, configs are kept in a directory and their relative path maps to their 1Password item name. A `.joao.yaml` file must exist at the root configuration directory, specifying the 1Password vault to use, and optionally a prefix to prepend to every item name
 
 ```yaml
 # config/.joao.yaml

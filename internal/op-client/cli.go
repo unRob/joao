@@ -49,6 +49,8 @@ type CLI struct {
 	DryRun bool // Won't write to 1Password
 }
 
+var _ opClient = &CLI{}
+
 func invoke(dryRun bool, vault string, stdin *bytes.Buffer, args ...string) (bytes.Buffer, error) {
 	if vault != "" {
 		args = append([]string{"--vault", shellescape.Quote(vault)}, args...)
@@ -80,8 +82,8 @@ func (b *CLI) Get(vault, name string) (*op.Item, error) {
 	return item, nil
 }
 
-func (b *CLI) Create(item *op.Item) error {
-	logrus.Infof("Creating new item: %s/%s", item.Vault.ID, item.Title)
+func (b *CLI) Create(vault string, item *op.Item) error {
+	logrus.Infof("Creating new item: %s/%s", vault, item.Title)
 
 	itemJSON, err := json.Marshal(item)
 	if err != nil {
@@ -90,12 +92,12 @@ func (b *CLI) Create(item *op.Item) error {
 
 	stdin := bytes.NewBuffer(itemJSON)
 
-	_, err = invoke(b.DryRun, item.Vault.ID, stdin, "item", "create")
+	_, err = invoke(b.DryRun, vault, stdin, "item", "create")
 	if err != nil {
 		return fmt.Errorf("could not create item: %w", err)
 	}
 
-	logrus.Infof("Item %s/%s created", item.Vault.ID, item.Title)
+	logrus.Infof("Item %s/%s created", vault, item.Title)
 	return nil
 }
 

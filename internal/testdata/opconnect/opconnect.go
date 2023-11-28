@@ -95,15 +95,15 @@ func (m *Client) GetItems(vaultQuery string) ([]onepassword.Item, error) {
 }
 
 func (m *Client) GetItem(itemQuery, vaultQuery string) (*onepassword.Item, error) {
-	return get(itemQuery, vaultQuery)
+	return Get(itemQuery, vaultQuery)
 }
 
 func (m *Client) GetItemByUUID(uuid string, vaultQuery string) (*onepassword.Item, error) {
-	return get(uuid, vaultQuery)
+	return Get(uuid, vaultQuery)
 }
 
 func (m *Client) GetItemByTitle(title string, vaultQuery string) (*onepassword.Item, error) {
-	return get(title, vaultQuery)
+	return Get(title, vaultQuery)
 }
 
 func (m *Client) GetItemsByTitle(title string, vaultQuery string) ([]onepassword.Item, error) {
@@ -132,7 +132,7 @@ func (m *Client) DeleteItem(item *onepassword.Item, vaultQuery string) error {
 }
 
 func (m *Client) DeleteItemByID(itemUUID string, vaultQuery string) error {
-	item, err := get(itemUUID, vaultQuery)
+	item, err := Get(itemUUID, vaultQuery)
 	if err != nil {
 		return err
 	}
@@ -140,7 +140,7 @@ func (m *Client) DeleteItemByID(itemUUID string, vaultQuery string) error {
 }
 
 func (m *Client) DeleteItemByTitle(title string, vaultQuery string) error {
-	item, err := get(title, vaultQuery)
+	item, err := Get(title, vaultQuery)
 	if err != nil {
 		return err
 	}
@@ -187,19 +187,19 @@ func itemID() string {
 	return string(b)
 }
 
-func get(itemUUID, vaultUUID string) (*onepassword.Item, error) {
+func Get(itemUUID, vaultUUID string) (*onepassword.Item, error) {
 	for _, item := range items {
 		if (item.ID == itemUUID || item.Title == itemUUID) && item.Vault.ID == vaultUUID {
 			return item, nil
 		}
 	}
 
-	return nil, fmt.Errorf("could not retrieve item with id %s in vault %s", itemUUID, vaultUUID)
+	return nil, &onepassword.Error{StatusCode: 404, Message: fmt.Sprintf("could not retrieve item with id %s in vault %s", itemUUID, vaultUUID)}
 }
 
 func deleteItem(item *onepassword.Item, vaultUUID string) error {
 	if item.Vault.ID != vaultUUID {
-		return fmt.Errorf("could not delete item: %s: not found in vault %s", item.Title, vaultUUID)
+		return &onepassword.Error{StatusCode: 404, Message: fmt.Sprintf("could not delete item: %s: not found in vault %s", item.Title, vaultUUID)}
 	}
 	Delete(item.ID)
 	return nil

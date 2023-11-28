@@ -15,6 +15,7 @@ gotestsum --format testname -- "$MILPA_ARG_SPEC" "${args[@]}" || exit 2
 
 [[ ! "${MILPA_OPT_COVERAGE}" ]] && exit
 @milpa.log info "Building coverage report"
+sed -i '' '/internal\/testdata/d' coverage.out
 go tool cover -html=coverage.out -o coverage.html || @milpa.fail "could not build reports"
 go tool cover -func=coverage.out | tail -n 1
 @milpa.log complete "Coverage report ready at coverage.html"

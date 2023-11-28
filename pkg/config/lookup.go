@@ -14,6 +14,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// returns repo config details, error on failure to open/parse found files
 func findRepoConfig(from string) (*opDetails, error) {
 	parts := strings.Split(from, "/")
 	for i := len(parts); i > 0; i-- {

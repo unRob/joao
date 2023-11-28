@@ -6,16 +6,33 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/1Password/connect-sdk-go/onepassword"
 	op "github.com/1Password/connect-sdk-go/onepassword"
 	"github.com/sirupsen/logrus"
 )
+
+const itemMissingErrorSuffix = `" isn't an item.`            // Specify the item...
+const itemMissingErrorWithVault = `" isn't an item in the "` // "vaultName" vault. Specify the item...
+
+func ItemMissingError(name string, err error) bool {
+	if opErr, ok := err.(*onepassword.Error); ok {
+		return opErr.StatusCode == 404
+	}
+	needle := itemMissingErrorSuffix
+	needleWithVault := itemMissingErrorWithVault
+	if name != "" {
+		needle = fmt.Sprintf(`"%s`+itemMissingErrorSuffix, name)
+		needleWithVault = fmt.Sprintf(`"%s`+itemMissingErrorWithVault, name)
+	}
+	return strings.Contains(err.Error(), needle) || strings.Contains(err.Error(), needleWithVault)
+}
 
 var client opClient
 
 type opClient interface {
 	Get(vault, name string) (*op.Item, error)
 	Update(item *op.Item, remote *op.Item) error
-	Create(item *op.Item) error
+	Create(vault string, item *op.Item) error
 	List(vault, prefix string) ([]string, error)
 }
 
@@ -34,8 +51,8 @@ func Get(vault, name string) (*op.Item, error) {
 func Update(vault, name string, item *op.Item) error {
 	remote, err := client.Get(vault, name)
 	if err != nil {
-		if strings.Contains(err.Error(), fmt.Sprintf("\"%s\" isn't an item in ", name)) {
-			return client.Create(item)
+		if ItemMissingError(name, err) {
+			return client.Create(vault, item)
 		}
 
 		return fmt.Errorf("could not fetch remote 1password item to compare against: %w", err)

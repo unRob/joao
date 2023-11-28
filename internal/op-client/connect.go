@@ -34,6 +34,8 @@ type Connect struct {
 	client connect.Client
 }
 
+var _ opClient = &Connect{}
+
 const userAgent = "nidito-joao"
 
 func NewConnect(host, token string) *Connect {
@@ -65,7 +67,7 @@ func (b *Connect) List(vault, prefix string) ([]string, error) {
 	return res, nil
 }
 
-func (b *Connect) Create(item *op.Item) error {
-	_, err := b.client.CreateItem(item, item.Vault.ID)
+func (b *Connect) Create(vault string, item *op.Item) error {
+	_, err := b.client.CreateItem(item, vault)
 	return err
 }

@@ -2,6 +2,7 @@ package testdata
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"runtime"
@@ -44,6 +45,30 @@ func TempDir(t *testing.T, name string) string {
 
 func YAML(name string) string {
 	return path.Join(FromProjectRoot(), "testdata", fmt.Sprintf("%s.yaml", name))
+}
+
+func copyFile(in, out string) error {
+	src, err := os.Open(in)
+	if err != nil {
+		return err
+	}
+	defer src.Close()
+	dst, err := os.Create(out)
+	if err != nil {
+		return err
+	}
+	defer dst.Close()
+	_, err = io.Copy(dst, src)
+	return err
+}
+
+func TempYAML(t *testing.T, name string) (string, func()) {
+	root := TempDir(t, "temp-yaml")
+	path := fmt.Sprintf("%s/%s.yaml", root, name)
+	if err := copyFile(YAML(name), path); err != nil {
+		t.Fatalf("could not create copy of fixture %s.yaml", name)
+	}
+	return path, func() { os.Remove(path) }
 }
 
 func EnableDebugLogging() {

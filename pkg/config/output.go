@@ -9,7 +9,7 @@ import (
 	"io/fs"
 	"os"
 
-	opClient "git.rob.mx/nidito/joao/internal/op-client"
+	opClient "git.rob.mx/nidito/joao/pkg/op-client"
 	op "github.com/1Password/connect-sdk-go/onepassword"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"

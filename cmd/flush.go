@@ -6,8 +6,8 @@ import (
 	"fmt"
 
 	"git.rob.mx/nidito/chinampa/pkg/command"
-	opclient "git.rob.mx/nidito/joao/internal/op-client"
 	"git.rob.mx/nidito/joao/pkg/config"
+	opclient "git.rob.mx/nidito/joao/pkg/op-client"
 	"github.com/sirupsen/logrus"
 )
 

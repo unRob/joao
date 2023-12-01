@@ -9,7 +9,7 @@ import (
 	"os/exec"
 	"strings"
 
-	opclient "git.rob.mx/nidito/joao/internal/op-client"
+	opclient "git.rob.mx/nidito/joao/pkg/op-client"
 	op "github.com/1Password/connect-sdk-go/onepassword"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v3"

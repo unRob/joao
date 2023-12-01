@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	opclient "git.rob.mx/nidito/joao/internal/op-client"
 	"git.rob.mx/nidito/joao/internal/testdata"
+	opclient "git.rob.mx/nidito/joao/pkg/op-client"
 	"github.com/1Password/connect-sdk-go/onepassword"
 	"github.com/sirupsen/logrus"
 )
